@@ -29,7 +29,7 @@
 <body>
 <main>
   <h1>Stimulus check</h1>
-  <p class="muted">Listen to each condition. Only one plays at a time. All four use the same melody; files are 256 s and loop.</p>
+  <p class="muted">Listen to each condition. Only one plays at a time. All four play the same composed melody (16 teentaal cycles in Bhupali); files are 256 s and loop. Sampled instruments via GeneralUser GS and Tabla.sf2.</p>
 
   <div class="card">
     <h2>A/B switcher</h2>
@@ -43,10 +43,10 @@
 <script>
 "use strict";
 const TRACKS = [
-  { key: "A", file: "stimuli/A_raga_slow.wav",    label: "A · Raga, slow (60 BPM)",    desc: "Flute-like melody with meend and andolan, tanpura drone, tabla teentaal." },
-  { key: "B", file: "stimuli/B_raga_fast.wav",    label: "B · Raga, fast (120 BPM)",   desc: "Same as A at double tempo." },
-  { key: "C", file: "stimuli/C_western_slow.wav", label: "C · Western, slow (60 BPM)", desc: "Same melody on plain piano, pentatonic chord bed, kick/snare/hi-hat." },
-  { key: "D", file: "stimuli/D_western_fast.wav", label: "D · Western, fast (120 BPM)", desc: "Same as C at double tempo." }
+  { key: "A", file: "stimuli/A_raga_slow.mp3",    label: "A · Raga, slow (60 BPM)",    desc: "Flute with meend, kan and vibrato; tanpura drone (sitar patch); tabla teentaal with fills." },
+  { key: "B", file: "stimuli/B_raga_fast.mp3",    label: "B · Raga, fast (120 BPM)",   desc: "Same as A at double tempo." },
+  { key: "C", file: "stimuli/C_western_slow.mp3", label: "C · Western, slow (60 BPM)", desc: "Same melody on piano, no ornaments; left-hand broken chords, bass, drum kit." },
+  { key: "D", file: "stimuli/D_western_fast.mp3", label: "D · Western, fast (120 BPM)", desc: "Same as C at double tempo." }
 ];
 const players = [];
 const list = document.getElementById("list");
