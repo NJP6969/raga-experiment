@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stimulus Check</title>
+<style>
+  :root { --bg:#fafaf7; --fg:#1d1d1b; --muted:#6b6b66; --line:#d9d9d2; --accent:#2f5d50; --accent-fg:#fff; --card:#fff; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#161715; --fg:#ececE6; --muted:#9a9a92; --line:#33342f; --accent:#7fb8a4; --accent-fg:#102019; --card:#1e1f1c; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  main { max-width:720px; margin:0 auto; padding:32px 16px 64px; }
+  h1 { font-size:1.4rem; margin:0 0 .25rem; }
+  .muted { color:var(--muted); font-size:.9rem; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; margin:14px 0; }
+  .card h2 { font-size:1.05rem; margin:0; }
+  .card p { margin:.25rem 0 .75rem; }
+  audio { width:100%; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+  button { font:inherit; font-size:.9rem; padding:6px 12px; border-radius:6px; border:1px solid var(--accent); background:transparent; color:var(--accent); cursor:pointer; }
+  button.primary { background:var(--accent); color:var(--accent-fg); }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
+  .grid button { padding:10px; }
+  .grid button.on { background:var(--accent); color:var(--accent-fg); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Stimulus check</h1>
+  <p class="muted">Listen to each condition. Only one plays at a time. All four use the same melody; files are 256 s and loop.</p>
+
+  <div class="card">
+    <h2>A/B switcher</h2>
+    <p class="muted">Switches track but keeps the playback position, so you hear the same bar in each style or tempo. Slow and fast are at different points in the melody, so compare slow with slow and fast with fast.</p>
+    <div class="grid" id="ab"></div>
+    <div class="row"><button id="abStop">Stop</button></div>
+  </div>
+
+  <div id="list"></div>
+</main>
+<script>
+"use strict";
+const TRACKS = [
+  { key: "A", file: "stimuli/A_raga_slow.wav",    label: "A · Raga, slow (60 BPM)",    desc: "Flute-like melody with meend and andolan, tanpura drone, tabla teentaal." },
+  { key: "B", file: "stimuli/B_raga_fast.wav",    label: "B · Raga, fast (120 BPM)",   desc: "Same as A at double tempo." },
+  { key: "C", file: "stimuli/C_western_slow.wav", label: "C · Western, slow (60 BPM)", desc: "Same melody on plain piano, pentatonic chord bed, kick/snare/hi-hat." },
+  { key: "D", file: "stimuli/D_western_fast.wav", label: "D · Western, fast (120 BPM)", desc: "Same as C at double tempo." }
+];
+const players = [];
+const list = document.getElementById("list");
+
+function pauseOthers(except) { players.forEach(p => { if (p !== except) p.pause(); }); }
+
+TRACKS.forEach(t => {
+  const card = document.createElement("div");
+  card.className = "card";
+  card.innerHTML = `<h2>${t.label}</h2><p class="muted">${t.desc}</p>
+    <audio controls loop preload="metadata" src="${t.file}"></audio>
+    <div class="row">
+      <button data-a="seam">Jump to 8 s before loop point</button>
+      <button data-a="start">Restart</button>
+    </div>`;
+  list.appendChild(card);
+  const a = card.querySelector("audio");
+  players.push(a);
+  a.addEventListener("play", () => pauseOthers(a));
+  card.querySelector('[data-a="seam"]').onclick = () => { a.currentTime = Math.max(0, (a.duration || 256) - 8); a.play(); };
+  card.querySelector('[data-a="start"]').onclick = () => { a.currentTime = 0; a.play(); };
+});
+
+const ab = document.getElementById("ab");
+let current = null;
+TRACKS.forEach((t, i) => {
+  const b = document.createElement("button");
+  b.textContent = t.label.split(" (")[0];
+  b.onclick = () => {
+    const pos = current ? current.currentTime : 0;
+    pauseOthers(null);
+    current = players[i];
+    current.currentTime = pos % (current.duration || 256);
+    current.play();
+    ab.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
+  };
+  ab.appendChild(b);
+});
+document.getElementById("abStop").onclick = () => { pauseOthers(null); ab.querySelectorAll("button").forEach(x => x.classList.remove("on")); };
+</script>
+</body>
+</html>
