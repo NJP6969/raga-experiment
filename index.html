@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Music and Memory Task</title>
+<style>
+  :root { --bg:#fafaf7; --fg:#1d1d1b; --muted:#6b6b66; --line:#d9d9d2; --accent:#2f5d50; --accent-fg:#fff; --card:#fff; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#161715; --fg:#ececE6; --muted:#9a9a92; --line:#33342f; --accent:#7fb8a4; --accent-fg:#102019; --card:#1e1f1c; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:17px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  main { max-width:640px; margin:0 auto; padding:32px 16px 64px; min-height:100vh; }
+  h1 { font-size:1.5rem; margin:0 0 .5rem; }
+  h2 { font-size:1.2rem; margin:0 0 .5rem; }
+  p { margin:.5rem 0 1rem; }
+  .muted { color:var(--muted); font-size:.9rem; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:20px; }
+  label { display:block; margin:14px 0 4px; font-weight:600; }
+  input[type=text], input[type=number], select { width:100%; padding:10px; font:inherit; color:var(--fg); background:var(--bg); border:1px solid var(--line); border-radius:8px; }
+  button { font:inherit; padding:10px 20px; border-radius:8px; border:1px solid var(--accent); background:var(--accent); color:var(--accent-fg); cursor:pointer; margin-top:16px; }
+  button.secondary { background:transparent; color:var(--accent); }
+  button:disabled { opacity:.4; cursor:not-allowed; }
+  .stage { display:flex; align-items:center; justify-content:center; min-height:260px; text-align:center; }
+  .big { font-size:5rem; font-weight:700; letter-spacing:.02em; }
+  .fix { font-size:4rem; color:var(--muted); }
+  .keys { display:flex; gap:10px; justify-content:center; margin-top:8px; }
+  .keys span { padding:6px 14px; border:1px solid var(--line); border-radius:6px; font-weight:700; }
+  .scale { display:flex; gap:8px; margin:6px 0 4px; }
+  .scale button { margin:0; flex:1; background:transparent; color:var(--fg); border-color:var(--line); padding:12px 0; }
+  .scale button.on { background:var(--accent); color:var(--accent-fg); border-color:var(--accent); }
+  .ends { display:flex; justify-content:space-between; font-size:.85rem; color:var(--muted); }
+  .bar { height:6px; background:var(--line); border-radius:3px; margin-bottom:24px; }
+  .bar > div { height:100%; background:var(--accent); border-radius:3px; transition:width .3s; }
+  .warn { background:#fff4d6; color:#5a4300; border:1px solid #e6cf85; border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:.9rem; }
+  table { width:100%; border-collapse:collapse; font-size:.9rem; margin:12px 0; }
+  th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); }
+  #digitIn { font:inherit; font-size:2rem; text-align:center; width:12ch; letter-spacing:.2em; }
+</style>
+</head>
+<body>
+<main>
+  <div class="bar"><div id="prog" style="width:0%"></div></div>
+  <div id="warn"></div>
+  <div id="app"></div>
+</main>
+
+<script>
+"use strict";
+/* ---------- config ---------- */
+const Q = new URLSearchParams(location.search);
+const FAST = Q.has("fast");                 // ?fast=1 shortens lead-in and rest, for piloting
+const LEAD_IN_S = FAST ? 3 : 60;
+const REST_S = FAST ? 2 : 20;
+const SPAN_BUDGET_MS = 75000;               // no new digit-span length after this
+const STROOP_N = 24;
+
+const CONDITIONS = {
+  A: { label: "Raga, slow",    style: "raga",    tempo: "slow", file: "stimuli/A_raga_slow.wav" },
+  B: { label: "Raga, fast",    style: "raga",    tempo: "fast", file: "stimuli/B_raga_fast.wav" },
+  C: { label: "Western, slow", style: "western", tempo: "slow", file: "stimuli/C_western_slow.wav" },
+  D: { label: "Western, fast", style: "western", tempo: "fast", file: "stimuli/D_western_fast.wav" },
+  E: { label: "Quiet",         style: "quiet",   tempo: "none", file: null }
+};
+const LATIN = ["ABCDE", "BCDEA", "CDEAB", "DEABC", "EABCD"];  // cyclic 5x5
+const WORDS = { r: "RED", g: "GREEN", b: "BLUE", y: "YELLOW" };
+const INK = { RED: "#d62828", GREEN: "#2a9d3f", BLUE: "#2b59d6", YELLOW: "#d4a800" };
+
+/* ---------- state ---------- */
+const app = document.getElementById("app");
+const rows = [];            // trial-level data
+const blockSummaries = [];
+let P = {};                 // participant info
+let audioOK = true;
+const audio = new Audio();
+audio.loop = true;
+audio.addEventListener("error", () => { audioOK = false; warn("An audio file could not be loaded. Check the stimuli folder."); });
+
+/* ---------- helpers ---------- */
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
+function warn(msg) { document.getElementById("warn").innerHTML = msg ? `<div class="warn">${msg}</div>` : ""; }
+function setProg(f) { document.getElementById("prog").style.width = Math.round(f * 100) + "%"; }
+function show(html) { app.innerHTML = html; }
+function screen(html, btn = "Continue") {
+  return new Promise(res => {
+    show(`<div class="card">${html}<button id="go">${btn}</button></div>`);
+    document.getElementById("go").onclick = () => res();
+  });
+}
+function mulberry32(a) {
+  return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+function hash(s) { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+function shuffle(a, rng) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function mean(a) { return a.length ? a.reduce((x, y) => x + y, 0) / a.length : NaN; }
+function fmt(x, d = 0) { return Number.isFinite(x) ? x.toFixed(d) : "–"; }
+
+function log(r) {
+  rows.push({ participant: P.id, latin_row: P.row + 1, familiarity: P.familiarity, training_years: P.training,
+              audio_ok: audioOK, timestamp: new Date().toISOString(), ...r });
+  try { localStorage.setItem("raga_backup_" + P.id, JSON.stringify(rows)); } catch (e) {}
+}
+
+function startMusic(file) {
+  if (!file) return;
+  audio.src = file; audio.currentTime = 0;
+  audio.play().catch(e => {
+    if (e.name === "AbortError") return;      // pause() arrived before play() finished: not a failure
+    audioOK = false; warn("Audio could not start. Click the page and check your volume.");
+  });
+}
+function stopMusic() { audio.pause(); }
+
+/* ---------- setup ---------- */
+async function setup() {
+  show(`<div class="card">
+    <h1>Music and Memory Task</h1>
+    <p>About 25 minutes. You will do two short tasks five times, with different background sounds each time. Use headphones, sit somewhere quiet, and keep this tab in focus.</p>
+    <p class="muted">Participation is voluntary and anonymous. You can stop at any time by closing the page. Your data stay on your computer until you choose to submit the file.</p>
+    <label for="pid">Participant ID</label>
+    <input id="pid" type="text" value="${Math.random().toString(36).slice(2, 6).toUpperCase()}" maxlength="12">
+    <label for="fam">How familiar are you with Indian classical music (ragas)?</label>
+    <select id="fam"><option value="1">1 – not at all</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5 – very familiar</option></select>
+    <label for="trn">Years of formal music training (0 if none)</label>
+    <input id="trn" type="number" min="0" max="60" value="0">
+    <label><input id="hear" type="checkbox" style="margin-right:8px">I have normal or corrected hearing and I am wearing headphones.</label>
+    <button id="start" disabled>Begin</button>
+  </div>`);
+  const hear = document.getElementById("hear"), start = document.getElementById("start");
+  hear.onchange = () => start.disabled = !hear.checked;
+  await new Promise(res => start.onclick = res);
+  const id = document.getElementById("pid").value.trim() || "anon";
+  P = { id, familiarity: +document.getElementById("fam").value, training: +document.getElementById("trn").value,
+        row: Q.has("row") ? (+Q.get("row") - 1) % 5 : Math.floor(Math.random() * 5) };
+  P.order = LATIN[P.row].split("");
+  P.seed = hash(id);
+}
+
+async function volumeCheck() {
+  const file = CONDITIONS.A.file;
+  show(`<div class="card"><h2>Set your volume</h2>
+    <p>A sample will play now. Adjust your volume until it is comfortable, then leave it there for the whole task.</p>
+    <button id="ok">Volume is comfortable</button></div>`);
+  startMusic(file);
+  await new Promise(res => document.getElementById("ok").onclick = res);
+  stopMusic();
+}
+
+/* ---------- Stroop ---------- */
+function stroopList(rng) {
+  const ws = Object.values(WORDS), list = [];
+  for (const w of ws) {
+    for (let k = 0; k < STROOP_N / 8; k++) list.push({ word: w, ink: w, congruent: 1 });              // 3 each = 12
+    for (const ink of ws) if (ink !== w) list.push({ word: w, ink, congruent: 0 });                   // 3 each = 12
+  }
+  return shuffle(list, rng);
+}
+function stroopTrial(t, feedback) {
+  return new Promise(async res => {
+    show(`<div class="stage"><div class="fix">+</div></div>`);
+    await sleep(500);
+    show(`<div class="stage"><div class="big" style="color:${INK[t.ink]}">${t.word}</div></div>
+          <div class="keys"><span>R</span><span>G</span><span>B</span><span>Y</span></div>
+          <p class="muted" style="text-align:center">Press the key for the ink colour: R red · G green · B blue · Y yellow</p>`);
+    await nextFrame();
+    const t0 = performance.now();
+    let done = false;
+    const finish = async (key) => {
+      if (done) return; done = true;
+      document.removeEventListener("keydown", onKey); clearTimeout(timer);
+      const rt = key ? performance.now() - t0 : null;
+      const resp = key ? WORDS[key] : null;
+      const correct = resp === t.ink ? 1 : 0;
+      if (feedback) {
+        show(`<div class="stage"><div class="big" style="font-size:2.5rem">${key ? (correct ? "Correct" : "Wrong") : "Too slow"}</div></div>`);
+        await sleep(700);
+      } else { show(`<div class="stage"></div>`); await sleep(250); }
+      res({ resp, correct, rt });
+    };
+    const onKey = e => { const k = e.key.toLowerCase(); if (WORDS[k]) { e.preventDefault(); finish(k); } };
+    document.addEventListener("keydown", onKey);
+    const timer = setTimeout(() => finish(null), 2000);
+  });
+}
+async function runStroop(rng, ctx, feedback = false, n = STROOP_N) {
+  const list = stroopList(rng).slice(0, n);
+  const out = [];
+  for (let i = 0; i < list.length; i++) {
+    const t = list[i], r = await stroopTrial(t, feedback);
+    out.push({ ...t, ...r });
+    if (!feedback) log({ ...ctx, task: "stroop", trial: i + 1, stimulus: t.word, ink: t.ink, congruent: t.congruent,
+                         response: r.resp ?? "", correct: r.correct, rt_ms: r.rt === null ? "" : r.rt.toFixed(1) });
+  }
+  return out;
+}
+
+/* ---------- backward digit span ---------- */
+function makeList(len, rng) {
+  const d = []; while (d.length < len) { const x = 1 + Math.floor(rng() * 9); if (d[d.length - 1] !== x) d.push(x); } return d;
+}
+async function presentDigits(d) {
+  for (const x of d) {
+    show(`<div class="stage"><div class="big">${x}</div></div>`); await sleep(1000);
+    show(`<div class="stage"></div>`); await sleep(250);
+  }
+}
+function typed(len) {
+  return new Promise(res => {
+    show(`<div class="stage" style="flex-direction:column"><p>Type the digits in <b>reverse</b> order, then press Enter.</p>
+          <input id="digitIn" type="text" inputmode="numeric" autocomplete="off" maxlength="${len}"></div>`);
+    const inp = document.getElementById("digitIn"); inp.focus();
+    const t0 = performance.now();
+    inp.addEventListener("keydown", e => {
+      if (e.key === "Enter" && inp.value.length > 0) res({ v: inp.value.replace(/\D/g, ""), rt: performance.now() - t0 });
+    });
+  });
+}
+async function runSpan(rng, ctx, feedback = false) {
+  let len = feedback ? 2 : 2, maxLen = 0, total = 0, trial = 0, ended = false;
+  const deadline = performance.now() + SPAN_BUDGET_MS;
+  while (len <= 9 && !ended && (feedback || performance.now() < deadline)) {
+    let ok = 0;
+    for (let k = 0; k < 2; k++) {
+      const d = makeList(len, rng);
+      await presentDigits(d);
+      const r = await typed(len);
+      const correct = r.v === d.slice().reverse().join("") ? 1 : 0;
+      ok += correct; trial++;
+      if (feedback) { show(`<div class="stage"><div class="big" style="font-size:2.5rem">${correct ? "Correct" : "Not quite"}</div></div>`); await sleep(900); }
+      else log({ ...ctx, task: "span", trial, list_length: len, stimulus: d.join(""), response: r.v, correct, rt_ms: r.rt.toFixed(0) });
+    }
+    total += ok; if (ok > 0) maxLen = len;
+    if (feedback) break;                      // practice: one length only
+    if (ok === 0) ended = true; else len++;
+  }
+  return { maxLen, total };
+}
+
+/* ---------- ratings, rest, instructions ---------- */
+function ratings(cond) {
+  return new Promise(res => {
+    const items = [["alertness", "How alert did you feel?", "very sleepy", "very alert"],
+                   ["mood", "How was your mood?", "very low", "very good"]];
+    const vals = {};
+    show(`<div class="card"><h2>Quick ratings</h2>${items.map(([k, q, lo, hi]) => `
+      <label>${q}</label><div class="scale" data-k="${k}">${[1,2,3,4,5].map(n => `<button data-v="${n}">${n}</button>`).join("")}</div>
+      <div class="ends"><span>${lo}</span><span>${hi}</span></div>`).join("")}
+      <button id="next" disabled>Continue</button></div>`);
+    const next = document.getElementById("next");
+    document.querySelectorAll(".scale").forEach(s => s.querySelectorAll("button").forEach(b => b.onclick = () => {
+      s.querySelectorAll("button").forEach(x => x.classList.remove("on")); b.classList.add("on");
+      vals[s.dataset.k] = +b.dataset.v; next.disabled = Object.keys(vals).length < items.length;
+    }));
+    next.onclick = () => res(vals);
+  });
+}
+async function rest(seconds) {
+  for (let s = seconds; s > 0; s--) {
+    show(`<div class="stage" style="flex-direction:column"><p>Short rest</p><div class="big" style="font-size:3rem">${s}</div></div>`);
+    await sleep(1000);
+  }
+}
+
+/* ---------- block ---------- */
+async function runBlock(pos, key) {
+  const c = CONDITIONS[key];
+  const rng = mulberry32(P.seed + pos * 7919);
+  const ctx = { block_position: pos + 1, condition: key, style: c.style, tempo: c.tempo };
+  setProg(pos / 5);
+  await screen(`<h2>Block ${pos + 1} of 5</h2>
+    <p>${c.file ? "Music will start playing. For the first minute, just listen. Then the two tasks will begin <b>while the music keeps playing</b>." : "This block is quiet. For the first minute, just sit still. Then the two tasks will begin."}</p>
+    <p class="muted">Backward digit span first, then the colour task. Keep your eyes on the screen.</p>`, "Start block");
+  startMusic(c.file);
+  for (let s = LEAD_IN_S; s > 0; s--) {
+    show(`<div class="stage" style="flex-direction:column"><div class="fix">+</div><p class="muted">${c.file ? "Just listen" : "Sit quietly"} · ${s}s</p></div>`);
+    await sleep(1000);
+  }
+  const sp = await runSpan(rng, ctx);
+  const st = await runStroop(rng, ctx);
+  stopMusic();
+  const rt = (cg) => st.filter(t => t.congruent === cg && t.correct && t.rt !== null).map(t => t.rt);
+  const rat = await ratings(key);
+  for (const [k, v] of Object.entries(rat)) log({ ...ctx, task: "rating", stimulus: k, response: v });
+  blockSummaries.push({
+    participant: P.id, block_position: pos + 1, condition: key, label: c.label, style: c.style, tempo: c.tempo,
+    span_max: sp.maxLen, span_total: sp.total,
+    stroop_cong_rt: mean(rt(1)), stroop_incong_rt: mean(rt(0)), stroop_interference: mean(rt(0)) - mean(rt(1)),
+    stroop_error_rate: st.filter(t => !t.correct).length / st.length,
+    alertness: rat.alertness, mood: rat.mood
+  });
+  if (pos < 4) await rest(REST_S);
+}
+
+/* ---------- export ---------- */
+function toCSV(arr) {
+  if (!arr.length) return "";
+  const cols = [...new Set(arr.flatMap(Object.keys))];
+  const esc = v => { v = v === undefined || v === null ? "" : String(v); return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v; };
+  return [cols.join(","), ...arr.map(r => cols.map(c => esc(r[c])).join(","))].join("\n");
+}
+function download(name, text) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type: "text/csv" })); a.download = name; a.click();
+}
+function finish() {
+  setProg(1);
+  const sorted = [...blockSummaries].sort((a, b) => a.condition.localeCompare(b.condition));
+  show(`<div class="card"><h1>Done, thank you</h1>
+    <p>Download both files and upload them to the shared folder your instructor gave you.</p>
+    <button id="d1">Download trial data</button> <button id="d2" class="secondary">Download block summary</button>
+    <h2 style="margin-top:24px">Your results</h2>
+    <table><tr><th>Condition</th><th>Span</th><th>Stroop interf. (ms)</th><th>Errors</th><th>Alert</th><th>Mood</th></tr>
+    ${sorted.map(b => `<tr><td>${b.label}</td><td>${b.span_max}</td><td>${fmt(b.stroop_interference)}</td><td>${fmt(b.stroop_error_rate * 100)}%</td><td>${b.alertness}</td><td>${b.mood}</td></tr>`).join("")}</table>
+    <p class="muted">One person's numbers are noisy and do not show an effect on their own. The class data are what count.</p></div>`);
+  document.getElementById("d1").onclick = () => download(`trials_${P.id}.csv`, toCSV(rows));
+  document.getElementById("d2").onclick = () => download(`blocks_${P.id}.csv`, toCSV(blockSummaries));
+}
+
+/* ---------- main ---------- */
+(async function main() {
+  await setup();
+  await volumeCheck();
+  await screen(`<h2>Task 1: Backward digit span</h2>
+    <p>Digits appear one at a time. Afterwards, type them in <b>reverse</b> order. Example: you see 3 – 8, you type 83.</p>
+    <p>Lists get longer until you miss both lists of one length. Practice first, with no music.</p>`, "Try a practice list");
+  await runSpan(mulberry32(1), {}, true);
+  await screen(`<h2>Task 2: Colour words</h2>
+    <p>A colour word appears in coloured ink. Press the key for the <b>ink colour</b>, not the word. Be fast and accurate.</p>
+    <div class="keys"><span>R red</span><span>G green</span><span>B blue</span><span>Y yellow</span></div>`, "Try practice trials");
+  await runStroop(mulberry32(2), {}, true, 8);
+  await screen(`<h2>Ready</h2><p>Five blocks follow, about 3–4 minutes each. Do not change your volume. Each block starts with a minute of just listening.</p>`, "Start");
+  for (let i = 0; i < 5; i++) await runBlock(i, P.order[i]);
+  finish();
+})();
+</script>
+</body>
+</html>
