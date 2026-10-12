@@ -5,10 +5,12 @@ sthayi -> development -> antara (upper register) -> tans (fast runs) -> return t
 No two cycles are the same. The melody (notes, timing, dynamics, humanization) is identical in
 all four conditions; only the arrangement and tempo change.
 
-  Raga:    flute melody with meend (pitch-bend glides), kan (grace notes) and vibrato,
-           tanpura-style drone (sitar patch), tabla teentaal theka with fills (Tabla.sf2).
-  Western: the same melody on piano, no ornaments; piano left-hand broken chords, bass,
-           drum kit. Chords use only the five Bhupali pitches (G, Em, Asus4, Dsus2).
+  Indian style:  flute melody in just intonation (Ga, Dha ~14-16 cents below equal temperament) with
+                 meend (pitch-bend glides), kan, murki and khatka; no Western vibrato. Tanpura-style drone
+                 (sitar patch), tabla teentaal theka with fills (Tabla.sf2).
+  Western style: the same melody on piano in equal temperament, no ornaments; piano left-hand broken
+                 chords, bass, drum kit. Chords use only the five Bhupali pitches (G, Em, Asus4, Dsus2).
+  The melody itself is Indian in both; the factor is Indian- vs Western-style rendition.
   Slow = 60 BPM (piece plays once per file), fast = 120 BPM (piece plays twice per file).
 
 Every file is 256 s and loops seamlessly (rendered three times, middle copy kept).
@@ -102,7 +104,8 @@ def compose(seed=11):
                 ph = pick(pools[sec])
             pos = 0.0
             for idx, b in ph:
-                vel = base + 5 * math.sin(math.pi * pos / 4) + rng.uniform(-4, 4) + (3 if b >= 2 else 0)
+                vel = base + 5 * math.sin(math.pi * pos / 4) + rng.uniform(-4, 4) + (3 if b >= 2 else 0) \
+                    + (5 if b >= 1 and idx % 5 in (2, 4) else 0)          # weight on vadi Ga / samvadi Dha
                 notes.append({"beat": c * CYCLE_BEATS + v * 4 + pos, "beats": b, "idx": idx,
                               "vel": int(min(120, max(30, vel))), "cycle": c})
                 pos += b
@@ -122,42 +125,62 @@ def melody_times(notes, spb, reps):
     return out
 
 
+# Just intonation relative to Sa (cents away from equal temperament): R 9/8, G 5/4, P 3/2, D 5/3.
+JI_CENTS = {0: 0.0, 2: 3.9, 4: -13.7, 7: 2.0, 9: -15.6}
+# Ornaments played before the main note: scale-step offsets, seconds per note, velocity change.
+ORN = {"kan": ([1], 0.07, -12), "murki": ([1, 0, -1], 0.055, -14), "khatka": ([1, 0, -1, 0], 0.075, -4)}
+
+
+def ji(idx):
+    return JI_CENTS[SC[idx % 5]]
+
+
+def bend(cents):                                       # bend range is set to +-12 semitones
+    return mido.Message("pitchwheel", pitch=int(max(-8192, min(8191, cents / 1200 * 8192))))
+
+
 def flute(mel, file_s):
+    """Indian-style line: just intonation, meend, kan, murki, khatka; no Western vibrato."""
     rng = random.Random(5)
     notes = []
     ctrl = [(0, mido.Message("control_change", control=c, value=v)) for c, v in
-            ((101, 0), (100, 0), (6, 12), (38, 0), (101, 127), (100, 127), (11, 110))]
+            ((101, 0), (100, 0), (6, 12), (38, 0), (101, 127), (100, 127), (11, 110), (1, 0))]
     plan = []
     for i, n in enumerate(mel):
         prev = mel[i - 1] if i else mel[-1]
-        kan = n["beats"] >= 1 and n["idx"] < 7 and rng.random() < 0.22
-        meend = (not kan) and n["beats"] >= 1 and abs(pitch(prev["idx"]) - pitch(n["idx"])) <= 5 \
-            and prev["idx"] != n["idx"] and rng.random() < 0.45
-        plan.append((kan, meend))
-    bent = False
+        r, d, x = rng.random(), n["dur"], n["idx"]
+        inner = -2 < x < 7                                 # neighbours stay inside the range
+        if n["beats"] >= 2 and d >= 1.0 and inner and r < 0.07:
+            plan.append("khatka")
+        elif n["beats"] >= 1 and d >= 0.5 and inner and r < 0.17:
+            plan.append("murki")
+        elif n["beats"] >= 1 and x < 7 and r < 0.37:
+            plan.append("kan")
+        elif n["beats"] >= 1 and prev["idx"] != x and abs(pitch(prev["idx"]) - pitch(x)) <= 5 and r < 0.72:
+            plan.append("meend")
+        else:
+            plan.append(None)
     for i, n in enumerate(mel):
-        kan, meend = plan[i]
+        kind = plan[i]; x = n["idx"]
         on = n["on"]; nxt = mel[i + 1]["on"] if i + 1 < len(mel) else file_s
-        nkan, nmeend = plan[i + 1] if i + 1 < len(mel) else plan[0]
-        p = pitch(n["idx"])
-        off = nxt if nmeend else nxt + 0.015
-        if kan:
-            notes.append((on, on + 0.075, pitch(n["idx"] + 1), max(30, n["vel"] - 12)))
-            on += 0.06
-        if meend:
+        nkind = plan[i + 1] if i + 1 < len(mel) else plan[0]
+        off = nxt if nkind == "meend" else nxt + 0.015
+        if kind in ORN:
+            steps, step_s, dv = ORN[kind]
+            for s in steps:
+                ctrl.append((on - 0.002, bend(ji(x + s))))
+                notes.append((on, on + step_s + 0.01, pitch(x + s), max(30, n["vel"] + dv)))
+                on += step_s
+            ctrl.append((on - 0.002, bend(ji(x))))
+        elif kind == "meend":
             prev = mel[i - 1] if i else mel[-1]
-            semis = pitch(prev["idx"]) - p; g = min(0.25, 0.45 * n["dur"])
-            for k in range(11):
-                v = semis * (0.5 + 0.5 * math.cos(math.pi * k / 10))
-                ctrl.append((on - 0.002 + g * k / 10, mido.Message("pitchwheel", pitch=int(max(-8192, min(8191, v / 12 * 8192))))))
-            bent = True
-        elif bent:
-            ctrl.append((on - 0.002, mido.Message("pitchwheel", pitch=0))); bent = False
-        if n["dur"] >= 1.2:                            # delayed vibrato on long notes
-            for k in range(6):
-                ctrl.append((on + n["dur"] * (0.4 + 0.06 * k), mido.Message("control_change", control=1, value=9 * k)))
-            ctrl.append((nxt - 0.003, mido.Message("control_change", control=1, value=0)))
-        notes.append((on, off, p, n["vel"]))
+            start = (pitch(prev["idx"]) - pitch(x)) * 100 + ji(prev["idx"]); end = ji(x)
+            g = min(0.3, 0.45 * n["dur"])
+            for k in range(13):
+                ctrl.append((on - 0.002 + g * k / 12, bend(end + (start - end) * (0.5 + 0.5 * math.cos(math.pi * k / 12)))))
+        else:
+            ctrl.append((on - 0.002, bend(ji(x))))
+        notes.append((on, off, pitch(x), n["vel"]))
     return notes, ctrl
 
 

@@ -57,10 +57,10 @@ const SPAN_BUDGET_MS = 75000;               // no new digit-span length after th
 const STROOP_N = 24;
 
 const CONDITIONS = {
-  A: { label: "Raga, slow",    style: "raga",    tempo: "slow", file: "stimuli/A_raga_slow.mp3" },
-  B: { label: "Raga, fast",    style: "raga",    tempo: "fast", file: "stimuli/B_raga_fast.mp3" },
-  C: { label: "Western, slow", style: "western", tempo: "slow", file: "stimuli/C_western_slow.mp3" },
-  D: { label: "Western, fast", style: "western", tempo: "fast", file: "stimuli/D_western_fast.mp3" },
+  A: { label: "Indian style, slow", style: "raga",    tempo: "slow", file: "stimuli/A_raga_slow.mp3" },
+  B: { label: "Indian style, fast", style: "raga",    tempo: "fast", file: "stimuli/B_raga_fast.mp3" },
+  C: { label: "Western style, slow", style: "western", tempo: "slow", file: "stimuli/C_western_slow.mp3" },
+  D: { label: "Western style, fast", style: "western", tempo: "fast", file: "stimuli/D_western_fast.mp3" },
   E: { label: "Quiet",         style: "quiet",   tempo: "none", file: null }
 };
 const LATIN = ["ABCDE", "BCDEA", "CDEAB", "DEABC", "EABCD"];  // cyclic 5x5
@@ -244,6 +244,7 @@ function ratings(cond) {
   return new Promise(res => {
     const items = [["alertness", "How alert did you feel?", "very sleepy", "very alert"],
                    ["mood", "How was your mood?", "very low", "very good"]];
+    if (CONDITIONS[cond].file) items.push(["indian", "How Indian did the music sound?", "not at all", "very"]);
     const vals = {};
     show(`<div class="card"><h2>Quick ratings</h2>${items.map(([k, q, lo, hi]) => `
       <label>${q}</label><div class="scale" data-k="${k}">${[1,2,3,4,5].map(n => `<button data-v="${n}">${n}</button>`).join("")}</div>
@@ -289,7 +290,7 @@ async function runBlock(pos, key) {
     span_max: sp.maxLen, span_total: sp.total,
     stroop_cong_rt: mean(rt(1)), stroop_incong_rt: mean(rt(0)), stroop_interference: mean(rt(0)) - mean(rt(1)),
     stroop_error_rate: st.filter(t => !t.correct).length / st.length,
-    alertness: rat.alertness, mood: rat.mood
+    alertness: rat.alertness, mood: rat.mood, indian: rat.indian ?? ""
   });
   if (pos < 4) await rest(REST_S);
 }
@@ -312,8 +313,8 @@ function finish() {
     <p>Download both files and upload them to the shared folder your instructor gave you.</p>
     <button id="d1">Download trial data</button> <button id="d2" class="secondary">Download block summary</button>
     <h2 style="margin-top:24px">Your results</h2>
-    <table><tr><th>Condition</th><th>Span</th><th>Stroop interf. (ms)</th><th>Errors</th><th>Alert</th><th>Mood</th></tr>
-    ${sorted.map(b => `<tr><td>${b.label}</td><td>${b.span_max}</td><td>${fmt(b.stroop_interference)}</td><td>${fmt(b.stroop_error_rate * 100)}%</td><td>${b.alertness}</td><td>${b.mood}</td></tr>`).join("")}</table>
+    <table><tr><th>Condition</th><th>Span</th><th>Stroop interf. (ms)</th><th>Errors</th><th>Alert</th><th>Mood</th><th>Indian</th></tr>
+    ${sorted.map(b => `<tr><td>${b.label}</td><td>${b.span_max}</td><td>${fmt(b.stroop_interference)}</td><td>${fmt(b.stroop_error_rate * 100)}%</td><td>${b.alertness}</td><td>${b.mood}</td><td>${b.indian || "–"}</td></tr>`).join("")}</table>
     <p class="muted">One person's numbers are noisy and do not show an effect on their own. The class data are what count.</p></div>`);
   document.getElementById("d1").onclick = () => download(`trials_${P.id}.csv`, toCSV(rows));
   document.getElementById("d2").onclick = () => download(`blocks_${P.id}.csv`, toCSV(blockSummaries));

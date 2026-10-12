@@ -7,9 +7,9 @@ Composed as MIDI in code and rendered with sampled instruments by `make_stimuli.
 
 | File | Condition |
 |---|---|
-| `A_raga_slow.mp3` | Flute melody with meend, kan and vibrato; tanpura drone (sitar patch); tabla teentaal with fills; 60 BPM |
+| `A_raga_slow.mp3` | Indian style: flute in just intonation with meend, kan, murki and khatka; tanpura drone (sitar patch); tabla teentaal with fills; 60 BPM |
 | `B_raga_fast.mp3` | Same at 120 BPM |
-| `C_western_slow.mp3` | Same melody on piano, no ornaments; left-hand broken chords (G, Em, Asus4, Dsus2: Bhupali pitches only), bass, drum kit; 60 BPM |
+| `C_western_slow.mp3` | Western style: same melody on piano, equal temperament, no ornaments; left-hand broken chords (G, Em, Asus4, Dsus2: Bhupali pitches only), bass, drum kit; 60 BPM |
 | `D_western_fast.mp3` | Same as C at 120 BPM |
 
 Quiet (E) is silence. The piece is 16 teentaal cycles (sthayi, development, antara, tans, return), no cycle repeated. Each file is 256 s and loops seamlessly; all are RMS-matched. `midi/` has the full arrangements for editing in MuseScore or a DAW (the tabla track uses the Tabla.sf2 note map, so it sounds wrong with a General MIDI soundfont).
@@ -21,7 +21,7 @@ python make_stimuli.py --fluidsynth PATH/fluidsynth.exe --gm PATH/GeneralUser-GS
 FluidSynth: github.com/FluidSynth/fluidsynth releases. GeneralUser GS: github.com/mrbumpy409/GeneralUser-GS (free licence). Tabla.sf2: CPAN module Music::Percussion::Tabla (Artistic License 2.0).
 
 ## Flow
-Consent and info, volume check, one practice of each task (no music), then 5 blocks in the student's Latin-square order: 1 min listening, backward digit span, 24-trial Stroop (music still playing), two ratings, 20 s rest. About 25 min.
+Consent and info, volume check, one practice of each task (no music), then 5 blocks in the student's Latin-square order: 1 min listening, backward digit span, 24-trial Stroop (music still playing), ratings (alertness, mood, and "how Indian" for music blocks), 20 s rest. About 25 min.
 
 ## URL options
 - `?fast=1` shortens lead-in and rest (3 s and 2 s) for piloting.
