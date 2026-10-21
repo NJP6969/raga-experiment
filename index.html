@@ -99,7 +99,7 @@ function mean(a) { return a.length ? a.reduce((x, y) => x + y, 0) / a.length : N
 function fmt(x, d = 0) { return Number.isFinite(x) ? x.toFixed(d) : "–"; }
 
 function log(r) {
-  rows.push({ participant: P.id, latin_row: P.row + 1, familiarity: P.familiarity, training_years: P.training,
+  rows.push({ participant: P.id, latin_row: P.row + 1, fam_carnatic: P.famC, fam_hindustani: P.famH, training_years: P.training,
               audio_ok: audioOK, timestamp: new Date().toISOString(), ...r });
   try { localStorage.setItem("raga_backup_" + P.id, JSON.stringify(rows)); } catch (e) {}
 }
@@ -122,18 +122,21 @@ async function setup() {
     <p class="muted">Participation is voluntary and anonymous. You can stop at any time by closing the page. Your data stay on your computer until you choose to submit the file.</p>
     <label for="pid">Participant ID</label>
     <input id="pid" type="text" value="${Math.random().toString(36).slice(2, 6).toUpperCase()}" maxlength="12">
-    <label for="fam">How familiar are you with Indian classical music (ragas)?</label>
-    <select id="fam"><option value="1">1 – not at all</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5 – very familiar</option></select>
+    <label for="famC">How familiar are you with Carnatic (South Indian classical) music?</label>
+    <select id="famC"><option value="" selected disabled>choose 1–5</option><option value="1">1 – not at all</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5 – very familiar</option></select>
+    <label for="famH">How familiar are you with Hindustani (North Indian classical) music?</label>
+    <select id="famH"><option value="" selected disabled>choose 1–5</option><option value="1">1 – not at all</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5 – very familiar</option></select>
     <label for="trn">Years of formal music training (0 if none)</label>
     <input id="trn" type="number" min="0" max="60" value="0">
     <label><input id="hear" type="checkbox" style="margin-right:8px">I have normal or corrected hearing and I am wearing headphones.</label>
     <button id="start" disabled>Begin</button>
   </div>`);
   const hear = document.getElementById("hear"), start = document.getElementById("start");
-  hear.onchange = () => start.disabled = !hear.checked;
+  const ready = () => start.disabled = !(hear.checked && document.getElementById("famC").value && document.getElementById("famH").value);
+  hear.onchange = ready; document.getElementById("famC").onchange = ready; document.getElementById("famH").onchange = ready;
   await new Promise(res => start.onclick = res);
   const id = document.getElementById("pid").value.trim() || "anon";
-  P = { id, familiarity: +document.getElementById("fam").value, training: +document.getElementById("trn").value,
+  P = { id, famC: +document.getElementById("famC").value, famH: +document.getElementById("famH").value, training: +document.getElementById("trn").value,
         row: Q.has("row") ? (+Q.get("row") - 1) % 5 : Math.floor(Math.random() * 5) };
   P.order = LATIN[P.row].split("");
   P.seed = hash(id);

@@ -1,0 +1,37 @@
+Raga Mohanam, Adi talam (8 beats). Sa = Eb. Numbers = beats; '~' = kampita; '_' lower octave, '^' upper.
+Gamakas applied automatically in the Indian-style render: jaru into every note; Sa/Pa plain;
+Dha ascending 'pa-sa-dha', descending 'sa-dha'; Ga descending 'pa-ga'; Ri descending 'ga-ri';
+kampita (to the upper swara) where marked '~' and on some long Ri/Ga/Dha; sphuritam on repeated notes.
+
+ 1  pallavi     G~2 R1 S1 D_1 S1 R1 G1
+ 2  pallavi     P1.5 G0.5 D~2 P1 G1 R~2
+ 3  pallavi     G~2 R1 S1 D_0.5 S0.5 R1 G1 P1
+ 4  pallavi     P1 D0.5 P0.5 G1 D~2 P1 G0.5 R0.5 G1
+ 5  pallavi     G0.5 G0.5 R0.5 R0.5 S1 D_1 S0.5 S0.5 R0.5 R0.5 G2
+ 6  pallavi     P0.5 P0.5 G0.5 G0.5 D~2 P0.5 P0.5 G0.5 G0.5 R~2
+ 7  pallavi     G~1 P1 D1 S^2 D1 P1 G1
+ 8  pallavi     S^1 D~1 P1 G1 D~1 P1 G0.5 R0.5 S1
+ 9  anupallavi  P1 D1 S^2 S^1 R^1 S^1 D1
+10  anupallavi  R^~2 S^1 D1 P1 D1 S^2
+11  anupallavi  S^1 R^1 G^~2 R^1 S^1 D~2
+12  anupallavi  S^1 D1 P1 G1 P1 D1 S^2
+13  anupallavi  S^0.5 S^0.5 R^0.5 R^0.5 G^~2 R^0.5 R^0.5 S^0.5 S^0.5 D~2
+14  anupallavi  S^1 D1 P1 G1 R1 G1 P0.5 G0.5 R1
+15  pallavi     G~2 R1 S1 D_0.5 S0.5 R1 G1 P1
+16  pallavi     P1 D0.5 P0.5 G1 D~2 P1 G0.5 R0.5 G1
+17  swaram      S0.5 S0.5 R0.5 R0.5 G0.5 G0.5 P0.5 P0.5 D0.5 D0.5 P0.5 P0.5 G0.5 G0.5 R0.5 R0.5
+18  pallavi     G~2 R1 S1 D_1 S1 R1 G1
+19  swaram      D_0.5 S0.5 R0.5 G0.5 S0.5 R0.5 G0.5 P0.5 R0.5 G0.5 P0.5 D0.5 G0.5 P0.5 D0.5 S^0.5
+20  swaram      D0.5 G0.5 R0.5 G0.5 S0.5 R0.5 G1 P1 D0.5 P0.5 G1 R1
+21  pallavi     G~2 R1 S1 D_1 S1 R1 G1
+22  swaram      S^0.5 D0.5 P0.5 G0.5 D0.5 P0.5 G0.5 R0.5 P0.5 G0.5 R0.5 S0.5 G0.5 R0.5 S0.5 D_0.5
+23  mora        D_0.5 S0.5 R0.5 G0.5 P1 D_0.5 S0.5 R0.5 G0.5 P1 D_0.5 S0.5 R0.5 G0.5
+24  pallavi     G~2 R1 S1 D_1 S1 R1 G1
+25  charanam    D_2 S1 R1 G~2 R1 S1
+26  charanam    D_1 S1 R1 G1 P2 G1 R1
+27  charanam    G1 P1 D~2 P1 G1 R~2
+28  charanam    G1 R1 S1 D_1 P_1 D_1 S2
+29  pallavi     G~2 R1 S1 D_1 S1 R1 G1
+30  pallavi     P1.5 G0.5 D~2 P1 G1 R~2
+31  ending      P1 D1 S^1 D1 P1 G1 R1 G1
+32  ending      G0.5 R0.5 S1 G0.5 R0.5 S1 G0.5 R0.5 S3
