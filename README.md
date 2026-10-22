@@ -3,16 +3,16 @@
 Static page, no install. Open `index.html` in Chrome or Edge, or host the folder (GitHub Pages, any shared drive web server). Audio autoplay needs a click first, and the page always has one.
 
 ## Stimuli
-Raga Mohanam (S R2 G3 P D2, the Carnatic counterpart of Bhupali: same five notes), Adi talam, Sa = Eb. Built from real recorded samples by `make_stimuli.py`:
+Raga Shankarabharanam (S R2 G3 M1 P D2 N3: exactly the Western major scale; Bilawal in Hindustani music), Adi talam, Sa = Eb. Built from real recorded samples by `make_stimuli.py`:
 
 | File | Condition |
 |---|---|
-| `A_raga_slow.mp3` | Indian style: solo violin with continuous gamakas (jaru, kampita on Ri/Ga/Dha, 'pa-sa-dha', 'pa-ga', 'ga-ri', sphuritam on repeated notes), just intonation, Sa/Pa plain; real tanpura; real mridangam (moras into samam); 60 BPM |
+| `A_raga_slow.mp3` | Indian style: solo violin with continuous gamakas (Ga long and plain, Ni light, kampita on Ri/Ma/Dha, descending notes approached from above, sphuritam on repeated notes), just intonation, Sa/Pa steady; real tanpura; real mridangam (moras into samam); 60 BPM |
 | `B_raga_fast.mp3` | Same at 120 BPM |
-| `C_western_slow.mp3` | Western style: the same violin samples and melody, equal temperament, one bow per note, no slides; piano broken chords, cello, soft drum kit (chords use only the five Mohanam pitches); 60 BPM |
+| `C_western_slow.mp3` | Western style: the same violin samples and melody, equal temperament, one bow per note, no slides; piano broken chords and cello with major-key harmony (I ii iii IV V vi) fitted to the melody, soft drum kit; 60 BPM |
 | `D_western_fast.mp3` | Same as C at 120 BPM |
 
-Quiet (E) is silence. The piece has 32 avartanams: pallavi with four sangatis, anupallavi, pallavi, kalpanaswaram-style passages ending in a mora, charanam, pallavi, ending. Files are 256 s, loop seamlessly and are RMS-matched. `midi/mohanam_notation.txt` has the composition in swara notation for a Carnatic musician to review; `midi/*.mid` has the plain melody and the Western backing.
+Quiet (E) is silence. The piece has 32 avartanams: pallavi with four sangatis, anupallavi, pallavi, kalpanaswaram-style passages ending in a mora, charanam, pallavi, ending. Files are 256 s, loop seamlessly and are RMS-matched. `midi/shankarabharanam_notation.txt` has the composition in swara notation for a Carnatic musician to review; `midi/*.mid` has the plain melody and the Western backing.
 
 Samples (all real recordings):
 - Violin: VSCO 2 Community Edition, solo violin Arco Vib p (CC0), github.com/sgossner/VSCO-2-CE (SFZ branch).

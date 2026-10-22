@@ -1,0 +1,38 @@
+Raga Shankarabharanam, Adi talam (8 beats). Sa = Eb. Numbers = beats; '~' = kampita; '_' lower octave, '^' upper.
+Gamakas applied automatically in the Indian-style render: quick glide into every note; Sa/Pa steady;
+Ga long, flat and plain; Ni light; descending notes approached from the note above;
+kampita (towards the next note up) on Ri, Ma, Dha where marked '~' and on some other long Ri/Ma/Dha;
+sphuritam on repeated notes. Western-style chords are fitted to the melody (I ii iii IV V vi).
+
+ 1  pallavi     G2 M1 R~1 G1 P1 M~1 G1
+ 2  pallavi     R1 G1 M1 P1 D~1 N1 S^2
+ 3  pallavi     G2 M0.5 R0.5 G1 S1 R~1 G0.5 M0.5 P1
+ 4  pallavi     P1 D0.5 N0.5 D~1 P1 M~1 G1 M1 R1
+ 5  pallavi     G0.5 G0.5 M0.5 M0.5 P1 M1 G0.5 G0.5 R0.5 R0.5 S1 R1
+ 6  pallavi     P0.5 P0.5 D0.5 D0.5 N2 D0.5 D0.5 P0.5 P0.5 M~1 G1
+ 7  pallavi     G1 M1 P1 D~1 N1 S^2 R^~1
+ 8  pallavi     S^1 N1 D~1 P1 M~1 G1 R~1 S1
+ 9  anupallavi  P1 D~1 N1 S^2 R^~1 S^1 N1
+10  anupallavi  S^2 R^1 G^2 R^~1 S^1 N1
+11  anupallavi  D~1 N1 S^1 R^1 G^2 M^~1 R^1
+12  anupallavi  S^1 N1 D~1 N1 S^2 P1 D1
+13  anupallavi  N0.5 N0.5 S^0.5 S^0.5 R^~1 S^1 N2 D~1 P1
+14  anupallavi  M~1 P1 D1 P1 M1 G2 R1
+15  pallavi     G2 M0.5 R0.5 G1 S1 R~1 G0.5 M0.5 P1
+16  pallavi     P1 D0.5 N0.5 D~1 P1 M~1 G1 M1 R1
+17  swaram      S0.5 R0.5 G0.5 M0.5 P0.5 M0.5 G0.5 R0.5 G0.5 M0.5 P0.5 D0.5 N0.5 D0.5 P0.5 M0.5
+18  pallavi     G2 M1 R~1 G1 P1 M~1 G1
+19  swaram      G0.5 R0.5 G0.5 M0.5 P0.5 M0.5 P0.5 D0.5 N0.5 D0.5 N0.5 S^0.5 R^0.5 S^0.5 N0.5 D0.5
+20  swaram      P1 D0.5 N0.5 S^1 N0.5 D0.5 P1 M0.5 G0.5 M1 R1
+21  pallavi     G2 M1 R~1 G1 P1 M~1 G1
+22  swaram      S^0.5 N0.5 D0.5 P0.5 N0.5 D0.5 P0.5 M0.5 D0.5 P0.5 M0.5 G0.5 P0.5 M0.5 G0.5 R0.5
+23  mora        S0.5 R0.5 G0.5 M0.5 P1 S0.5 R0.5 G0.5 M0.5 P1 S0.5 R0.5 G0.5 M0.5
+24  pallavi     G2 M1 R~1 G1 P1 M~1 G1
+25  charanam    N_1 S1 R~1 G2 M1 R1 S1
+26  charanam    D_1 N_1 S1 R1 G1 M1 P2
+27  charanam    M~1 P1 D~2 P1 M1 G2
+28  charanam    M1 G1 R~1 S1 N_1 D_1 N_1 S1
+29  pallavi     G2 M1 R~1 G1 P1 M~1 G1
+30  pallavi     R1 G1 M1 P1 D~1 N1 S^2
+31  ending      P1 D~1 N1 S^1 N1 D1 P1 M~1
+32  ending      G0.5 R0.5 S1 G0.5 R0.5 S1 G0.5 R0.5 S3

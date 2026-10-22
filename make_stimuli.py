@@ -1,19 +1,20 @@
 """Build the four music stimuli from real recorded samples.
 
-Raga Mohanam (S R2 G3 P D2; the Carnatic counterpart of Bhupali, same five notes), Adi talam
-(8 beats x 4 aksharas), Sa = Eb4 to match the tanpura and mridangam recordings.
+Raga Shankarabharanam (S R2 G3 M1 P D2 N3: exactly the Western major scale; Bilawal in Hindustani
+music), Adi talam (8 beats x 4 aksharas), Sa = Eb4 to match the tanpura and mridangam recordings.
 
 One composed piece of 32 avartanams: pallavi with sangatis (each repeat more elaborate),
 anupallavi (upper register), pallavi, kalpanaswaram-style passages ending in a mora, charanam,
 pallavi, ending. The melody (notes, timing, dynamics) is identical in every condition.
 
-  Indian style:  solo violin with continuous gamakas (jaru slides, kampita on Ri/Ga/Dha, the
-                 'pa-sa-dha', 'pa-ga', 'ga-ri' approaches, sphuritam on repeated notes), notes in
-                 just intonation, Sa and Pa unornamented; real tanpura; real mridangam strokes
+  Indian style:  solo violin with continuous gamakas following Shankarabharanam practice: Ga long,
+                 flat and plain; Ni light; kampita on Ri, Ma and Dha (towards the next note up);
+                 descending notes approached from the note above; sphuritam on repeated notes;
+                 Sa and Pa steady; just intonation. Real tanpura; real mridangam strokes
                  (sarvalaghu-style accompaniment, moras into samam).
   Western style: the same violin samples and melody, equal temperament, one bow per note, no
-                 slides; upright piano broken chords + cello (GeneralUser GS) + soft drum kit.
-                 Chords use only the five Mohanam pitches (Eb, Cm, Fsus4, Bbsus2).
+                 slides; upright piano broken chords + cello (GeneralUser GS) + soft drum kit, with
+                 major-key chords (I ii iii IV V vi) chosen to fit the melody, cadencing V-I.
   Slow = 60 BPM (piece plays once per file), fast = 120 BPM (twice). Files are 256 s, loop
   seamlessly and are RMS-matched.
 
@@ -35,36 +36,37 @@ SR = 44100
 CR = 1000                                 # control rate for pitch curves (Hz)
 FILE_S = 256.0
 SA = 63                                   # Eb4
-SC = [0, 2, 4, 7, 9]
-NAMES = {"P_": -2, "D_": -1, "S": 0, "R": 1, "G": 2, "P": 3, "D": 4, "S^": 5, "R^": 6, "G^": 7, "P^": 8}
-JI = {0: 0.0, 2: 3.9, 4: -13.7, 7: 2.0, 9: -15.6}          # cents from equal temperament
+SC = [0, 2, 4, 5, 7, 9, 11]                                 # S R2 G3 M1 P D2 N3 = major scale
+NAMES = {"P_": -3, "D_": -2, "N_": -1, "S": 0, "R": 1, "G": 2, "M": 3, "P": 4, "D": 5, "N": 6,
+         "S^": 7, "R^": 8, "G^": 9, "M^": 10, "P^": 11}
+JI = {0: 0.0, 2: 3.9, 4: -13.7, 5: -2.0, 7: 2.0, 9: -15.6, 11: -11.7}   # cents from equal temperament
 AV_BEATS = 8
 
 
 def pitch(i):
-    return SA + 12 * (i // 5) + SC[i % 5]
+    return SA + 12 * (i // 7) + SC[i % 7]
 
 
 def ji_pitch(i):
-    return pitch(i) + JI[SC[i % 5]] / 100
+    return pitch(i) + JI[SC[i % 7]] / 100
 
 
 # ---------------- composition (swara notation; '~' = explicit kampita) ----------------
-TOK = re.compile(r"(P_|D_|S\^|R\^|G\^|P\^|S|R|G|P|D)(~?)([\d.]+)$")
-PALLAVI_1 = ["G~2 R1 S1 D_1 S1 R1 G1", "P1.5 G0.5 D~2 P1 G1 R~2"]
-PALLAVI_2 = ["G~2 R1 S1 D_0.5 S0.5 R1 G1 P1", "P1 D0.5 P0.5 G1 D~2 P1 G0.5 R0.5 G1"]
-PALLAVI_3 = ["G0.5 G0.5 R0.5 R0.5 S1 D_1 S0.5 S0.5 R0.5 R0.5 G2", "P0.5 P0.5 G0.5 G0.5 D~2 P0.5 P0.5 G0.5 G0.5 R~2"]
-PALLAVI_4 = ["G~1 P1 D1 S^2 D1 P1 G1", "S^1 D~1 P1 G1 D~1 P1 G0.5 R0.5 S1"]
-ANUPALLAVI = ["P1 D1 S^2 S^1 R^1 S^1 D1", "R^~2 S^1 D1 P1 D1 S^2", "S^1 R^1 G^~2 R^1 S^1 D~2",
-              "S^1 D1 P1 G1 P1 D1 S^2", "S^0.5 S^0.5 R^0.5 R^0.5 G^~2 R^0.5 R^0.5 S^0.5 S^0.5 D~2",
-              "S^1 D1 P1 G1 R1 G1 P0.5 G0.5 R1"]
-SW_R1 = ["S0.5 S0.5 R0.5 R0.5 G0.5 G0.5 P0.5 P0.5 D0.5 D0.5 P0.5 P0.5 G0.5 G0.5 R0.5 R0.5"]
-SW_R2 = ["D_0.5 S0.5 R0.5 G0.5 S0.5 R0.5 G0.5 P0.5 R0.5 G0.5 P0.5 D0.5 G0.5 P0.5 D0.5 S^0.5",
-         "D0.5 G0.5 R0.5 G0.5 S0.5 R0.5 G1 P1 D0.5 P0.5 G1 R1"]
-SW_R3 = ["S^0.5 D0.5 P0.5 G0.5 D0.5 P0.5 G0.5 R0.5 P0.5 G0.5 R0.5 S0.5 G0.5 R0.5 S0.5 D_0.5"]
-MORA = "D_0.5 S0.5 R0.5 G0.5 P1 D_0.5 S0.5 R0.5 G0.5 P1 D_0.5 S0.5 R0.5 G0.5"
-CHARANAM = ["D_2 S1 R1 G~2 R1 S1", "D_1 S1 R1 G1 P2 G1 R1", "G1 P1 D~2 P1 G1 R~2", "G1 R1 S1 D_1 P_1 D_1 S2"]
-ENDING = ["P1 D1 S^1 D1 P1 G1 R1 G1", "G0.5 R0.5 S1 G0.5 R0.5 S1 G0.5 R0.5 S3"]
+TOK = re.compile(r"(P_|D_|N_|S\^|R\^|G\^|M\^|P\^|S|R|G|M|P|D|N)(~?)([\d.]+)$")
+PALLAVI_1 = ["G2 M1 R~1 G1 P1 M~1 G1", "R1 G1 M1 P1 D~1 N1 S^2"]
+PALLAVI_2 = ["G2 M0.5 R0.5 G1 S1 R~1 G0.5 M0.5 P1", "P1 D0.5 N0.5 D~1 P1 M~1 G1 M1 R1"]
+PALLAVI_3 = ["G0.5 G0.5 M0.5 M0.5 P1 M1 G0.5 G0.5 R0.5 R0.5 S1 R1", "P0.5 P0.5 D0.5 D0.5 N2 D0.5 D0.5 P0.5 P0.5 M~1 G1"]
+PALLAVI_4 = ["G1 M1 P1 D~1 N1 S^2 R^~1", "S^1 N1 D~1 P1 M~1 G1 R~1 S1"]
+ANUPALLAVI = ["P1 D~1 N1 S^2 R^~1 S^1 N1", "S^2 R^1 G^2 R^~1 S^1 N1", "D~1 N1 S^1 R^1 G^2 M^~1 R^1",
+              "S^1 N1 D~1 N1 S^2 P1 D1", "N0.5 N0.5 S^0.5 S^0.5 R^~1 S^1 N2 D~1 P1",
+              "M~1 P1 D1 P1 M1 G2 R1"]
+SW_R1 = ["S0.5 R0.5 G0.5 M0.5 P0.5 M0.5 G0.5 R0.5 G0.5 M0.5 P0.5 D0.5 N0.5 D0.5 P0.5 M0.5"]
+SW_R2 = ["G0.5 R0.5 G0.5 M0.5 P0.5 M0.5 P0.5 D0.5 N0.5 D0.5 N0.5 S^0.5 R^0.5 S^0.5 N0.5 D0.5",
+         "P1 D0.5 N0.5 S^1 N0.5 D0.5 P1 M0.5 G0.5 M1 R1"]
+SW_R3 = ["S^0.5 N0.5 D0.5 P0.5 N0.5 D0.5 P0.5 M0.5 D0.5 P0.5 M0.5 G0.5 P0.5 M0.5 G0.5 R0.5"]
+MORA = "S0.5 R0.5 G0.5 M0.5 P1 S0.5 R0.5 G0.5 M0.5 P1 S0.5 R0.5 G0.5 M0.5"
+CHARANAM = ["N_1 S1 R~1 G2 M1 R1 S1", "D_1 N_1 S1 R1 G1 M1 P2", "M~1 P1 D~2 P1 M1 G2", "M1 G1 R~1 S1 N_1 D_1 N_1 S1"]
+ENDING = ["P1 D~1 N1 S^1 N1 D1 P1 M~1", "G0.5 R0.5 S1 G0.5 R0.5 S1 G0.5 R0.5 S3"]
 FORM = ([("pallavi", a) for a in PALLAVI_1 + PALLAVI_2 + PALLAVI_3 + PALLAVI_4]
         + [("anupallavi", a) for a in ANUPALLAVI]
         + [("pallavi", a) for a in PALLAVI_2]
@@ -94,7 +96,7 @@ def compose():
         pos = 0.0
         for idx, kamp, b in parse(av):
             vel = SECTION_VEL[sec] + 5 * math.sin(math.pi * (pos % 4) / 4) + rng.uniform(-3, 3) \
-                + (3 if b >= 2 else 0) + (4 if b >= 1 and idx % 5 in (2, 4) else 0)
+                + (3 if b >= 2 else 0) + (4 if b >= 1 and idx % 7 in (2, 5) else 0)
             notes.append({"beat": a * AV_BEATS + pos, "beats": b, "idx": idx, "kamp": kamp,
                           "vel": int(min(118, max(40, vel))), "sec": sec, "av": a})
             pos += b
@@ -126,31 +128,28 @@ def eased(bps, n):
 
 
 def gamaka(n, prev, rng):
-    """Breakpoints for one note in Carnatic style (Mohanam conventions)."""
+    """Breakpoints for one note in Carnatic style, Shankarabharanam conventions."""
     x, px, dur = n["idx"], prev["idx"], n["dur"]
     base, prevp = ji_pitch(x), ji_pitch(px)
     up, low = ji_pitch(x + 1), ji_pitch(x - 1)
-    pc = x % 5
+    pc = x % 7
     if px == x:                                                     # janta: sphuritam flick from below
-        return ([(0, low), (0.03, low), (0.055, base), (dur, base)] if pc not in (0, 3) else [(0, base), (dur, base)])
+        return ([(0, low), (0.025, low), (0.045, base), (dur, base)] if pc not in (0, 4) else [(0, base), (dur, base)])
     short = dur < 0.3
-    g = min(0.05 if short else 0.14, 0.3 * dur)
-    if short or pc in (0, 3):                                       # Sa, Pa: steady, plain glide in
-        return [(0, prevp), (g, base), (dur, base)]
+    g = min(0.04 if short else 0.09, 0.22 * dur)                     # quick, tight slides
     asc = prevp < base
-    if pc == 4 and asc:                                             # 'pa-sa-dha'
-        bps = [(0, prevp), (g, up), (g + min(0.12, 0.25 * dur), base)]
-    elif not asc:                                                   # 'sa-dha', 'pa-ga', 'ga-ri'
+    if short or pc in (0, 4) or asc:                                # Sa, Pa steady; ascents: quick glide in
+        bps = [(0, prevp), (g * (1.0 if pc in (0, 4) else 0.8), base)]
+    else:                                                           # descents: from the note above ('ma-ga', 'ga-ri', ...)
         bps = [(0, up), (g, base)]
-    else:
-        bps = [(0, prevp), (g * 0.7, base)]
-    if n["kamp"] or (n["beats"] >= 1.5 and rng.random() < 0.5):     # kampita towards the upper swara
-        t, half, depth, k = bps[-1][0], 0.5 / 5.5, 0.85 * (up - base), 0
-        while t + half < 0.8 * dur:
+    if pc in (1, 3, 5) and not short and (n["kamp"] or (n["beats"] >= 1.5 and rng.random() < 0.5)):
+        t, half, depth, k = bps[-1][0], 0.5 / 6.5, 0.8 * (up - base), 0      # kampita on Ri, Ma, Dha
+        while t + half < 0.85 * dur:
             t += half; k += 1
             bps.append((t, base + depth if k % 2 else base))
         if k % 2:
             bps.append((min(dur, t + half), base))
+    # Ga stays flat and plain; Ni only gets the light approach above.
     bps.append((max(dur, bps[-1][0] + 1e-3), base))
     return bps
 
@@ -346,17 +345,37 @@ def tanpura_loop(path):
 
 
 # ---------------- Western backing (GeneralUser GS via FluidSynth) ----------------
-CHORDS = {"I": [51, 55, 58], "vi": [48, 51, 55], "IIsus4": [53, 58, 60], "Vsus2": [46, 48, 53]}
-ROOT = {"I": 39, "vi": 36, "IIsus4": 41, "Vsus2": 34}
-PROG = {"pallavi": ["I", "vi", "IIsus4", "Vsus2"], "anupallavi": ["vi", "I", "Vsus2", "IIsus4"],
-        "swaram": ["I", "Vsus2", "vi", "IIsus4"], "mora": ["I", "Vsus2", "vi", "IIsus4"],
-        "charanam": ["vi", "IIsus4", "I", "Vsus2"], "ending": ["IIsus4", "Vsus2", "I", "I"]}
+DEGREE_CHORDS = {"I": (0, [0, 4, 7]), "ii": (2, [2, 5, 9]), "iii": (4, [4, 7, 11]),
+                 "IV": (5, [5, 9, 0]), "V": (7, [7, 11, 2]), "vi": (9, [9, 0, 4])}
+PREFER = {"pallavi": ["I", "vi", "IV", "V"], "anupallavi": ["IV", "I", "ii", "V"], "swaram": ["I", "IV", "V", "I"],
+          "mora": ["I", "IV", "V", "I"], "charanam": ["vi", "IV", "ii", "V"], "ending": ["IV", "V", "I", "I"]}
 DRUM_STYLE = {"pallavi": "light", "anupallavi": "ride", "swaram": "busy", "mora": "busy", "charanam": "groove", "ending": "light"}
 
 
-def western_backing(spb, reps):
+def harmonize(notes):
+    """One chord per half-avartanam (4 beats), chosen to cover the melody, preferring a section template."""
+    chords = []
+    for h in range(N_AV * 2):
+        lo, hi = h * 4, h * 4 + 4
+        sec = FORM[h // 2][0]
+        weight = {}
+        for n in notes:
+            ov = min(hi, n["beat"] + n["beats"]) - max(lo, n["beat"])
+            if ov > 0:
+                pc = SC[n["idx"] % 7]
+                weight[pc] = weight.get(pc, 0) + ov * (1.5 if n["beat"] == lo else 1)
+
+        def score(c):
+            return sum(w for pc, w in weight.items() if pc in DEGREE_CHORDS[c][1]) \
+                + (0.75 if PREFER[sec][h % 4] == c else 0) - (0.5 if chords and chords[-1] == c else 0)
+        chords.append(max(DEGREE_CHORDS, key=score))
+    chords[-2], chords[-1] = "V", "I"                                  # final cadence
+    return chords
+
+
+def western_backing(notes, spb, reps):
     rng = random.Random(17); lh, cello, drums = [], [], []
-    piece_s = PIECE_BEATS * spb
+    piece_s = PIECE_BEATS * spb; chords = harmonize(notes)
 
     def hit(t, note, vel, ln=0.3):
         drums.append((t, t + ln, note, int(min(127, max(15, vel + rng.randint(-6, 6))))))
@@ -364,13 +383,14 @@ def western_backing(spb, reps):
     for r in range(reps):
         for a, (sec, _) in enumerate(FORM):
             for half in range(2):                                      # two 4/4 bars per avartanam
-                ch = PROG[sec][(a % 2) * 2 + half] if not (a == N_AV - 1 and half == 1) else "I"
+                root_pc, pcs = DEGREE_CHORDS[chords[a * 2 + half]]
                 t0 = r * piece_s + (a * AV_BEATS + half * 4) * spb
-                tones = CHORDS[ch]
+                base = SA - 12 + root_pc                                   # close voicing from the root, octave 3
+                tones = sorted(base + ((pc - root_pc) % 12) for pc in pcs)
                 for e, o in enumerate([0, 1, 2, 1, 3, 1, 2, 1]):
                     p = tones[o % 3] + (12 if o >= 3 else 0); t = t0 + e * spb / 2
                     lh.append((t, t + spb / 2 + 0.05, p, 44 + (6 if e % 4 == 0 else 0) + rng.randint(-4, 4)))
-                cello.append((t0, t0 + 4 * spb - 0.05, ROOT[ch] + 12, 70 + rng.randint(-5, 5)))
+                cello.append((t0, t0 + 4 * spb - 0.05, SA - 24 + root_pc + (12 if root_pc < 5 else 0), 70 + rng.randint(-5, 5)))
                 style = DRUM_STYLE[sec]; bar = a * 2 + half
                 fill = a % 4 == 3 and half == 1
                 if half == 0 and a % 4 == 0:
@@ -440,10 +460,11 @@ def render_gm(fs_exe, sf2, name, prog, ch, notes, bpm, tmp):
 
 # ---------------- notation export for the reviewer ----------------
 def write_notation(path):
-    lines = ["Raga Mohanam, Adi talam (8 beats). Sa = Eb. Numbers = beats; '~' = kampita; '_' lower octave, '^' upper.",
-             "Gamakas applied automatically in the Indian-style render: jaru into every note; Sa/Pa plain;",
-             "Dha ascending 'pa-sa-dha', descending 'sa-dha'; Ga descending 'pa-ga'; Ri descending 'ga-ri';",
-             "kampita (to the upper swara) where marked '~' and on some long Ri/Ga/Dha; sphuritam on repeated notes.", ""]
+    lines = ["Raga Shankarabharanam, Adi talam (8 beats). Sa = Eb. Numbers = beats; '~' = kampita; '_' lower octave, '^' upper.",
+             "Gamakas applied automatically in the Indian-style render: quick glide into every note; Sa/Pa steady;",
+             "Ga long, flat and plain; Ni light; descending notes approached from the note above;",
+             "kampita (towards the next note up) on Ri, Ma, Dha where marked '~' and on some other long Ri/Ma/Dha;",
+             "sphuritam on repeated notes. Western-style chords are fitted to the melody (I ii iii IV V vi).", ""]
     for a, (sec, av) in enumerate(FORM):
         lines.append(f"{a + 1:2d}  {sec:<10s}  {av}")
     open(path, "w", encoding="utf8").write("\n".join(lines) + "\n")
@@ -467,21 +488,21 @@ def main():
             v_wes = violin_line(vln, mel, "western", random.Random(5)); print(f"  {tag}: violin (Western style)")
             rng = random.Random(13)
             mr = render_mridangam(md, mridangam_events(mel, spb, reps, rng), rng); print(f"  {tag}: mridangam")
-            (lh, _), (ce, _), (dr, _) = western_backing(spb, reps)
+            (lh, _), (ce, _), (dr, _) = western_backing(notes, spb, reps)
             piano = render_gm(a.fluidsynth, a.gm, "piano", 0, 0, lh, bpm, tmp)
             cello = render_gm(a.fluidsynth, a.gm, "cello", 42, 0, ce, bpm, tmp)
             drums = render_gm(a.fluidsynth, a.gm, "drums", None, 9, dr, bpm, tmp); print(f"  {tag}: western backing")
-            mixes["A_raga_slow" if tag == "slow" else "B_raga_fast"] = norm(v_ind) + 0.33 * norm(tan) + 0.7 * norm(mr)
+            mixes["A_raga_slow" if tag == "slow" else "B_raga_fast"] = norm(v_ind) + 0.55 * norm(tan) + 0.7 * norm(mr)
             mixes["C_western_slow" if tag == "slow" else "D_western_fast"] = norm(v_wes) + 0.45 * norm(piano) + 0.4 * norm(cello) + 0.45 * norm(drums)
             piece_s = PIECE_BEATS * spb
             one = [n for n in mel if n["on"] < piece_s]
             vnotes = [(n["on"], n["on"] + n["dur"], pitch(n["idx"]), n["vel"]) for n in one]
-            write_midi(os.path.join(midi_dir, f"mohanam_{tag}.mid"),
+            write_midi(os.path.join(midi_dir, f"shankarabharanam_{tag}.mid"),
                        [("Violin (melody, plain; gamakas are added at render time)", 40, 0, vnotes),
                         ("Piano left hand (Western style)", 0, 1, [x for x in lh if x[0] < piece_s]),
                         ("Cello (Western style)", 42, 2, [x for x in ce if x[0] < piece_s]),
                         ("Drums (Western style)", None, 9, [x for x in dr if x[0] < piece_s])], bpm, piece_s)
-    write_notation(os.path.join(midi_dir, "mohanam_notation.txt"))
+    write_notation(os.path.join(midi_dir, "shankarabharanam_notation.txt"))
     rms = {k: np.sqrt(np.mean(v ** 2)) for k, v in mixes.items()}
     target = min(0.1, *[0.89 / np.abs(v).max() * rms[k] for k, v in mixes.items()])
     for k, v in sorted(mixes.items()):
