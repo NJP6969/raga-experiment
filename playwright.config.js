@@ -1,13 +1,13 @@
 // Browser tests for the Music and Memory Task.
 // Every test runs on desktop, laptop, iPad (portrait and landscape) and phones (Android and iPhone sizes).
 // Locally these all use Chromium with each device's screen, touch and user agent.
-// With PW_WEBKIT=1 (set in CI) the iPhone, iPad and Mac Safari projects also run on the real WebKit engine.
+// The real WebKit (Safari engine) projects for iPhone, iPad and Mac are not run by default and have not been
+// checked; run them with PW_WEBKIT=1 after `npx playwright install webkit`.
 // With BASE_URL set, the tests run against that site (e.g. the live GitHub Pages URL) instead of a local server.
 const { defineConfig, devices } = require("@playwright/test");
 
 const PORT = +process.env.PORT || 4173;
 const BASE_URL = process.env.BASE_URL || `http://127.0.0.1:${PORT}/`;
-const CI = !!process.env.CI;
 const chromium = d => ({ ...d, browserName: "chromium", defaultBrowserType: "chromium" });
 
 const projects = [
@@ -31,10 +31,7 @@ module.exports = defineConfig({
   timeout: 60_000,
   expect: { timeout: 10_000 },
   fullyParallel: true,
-  forbidOnly: CI,
-  retries: CI ? 1 : 0,
-  workers: CI ? 2 : undefined,
-  reporter: CI ? [["list"], ["html", { open: "never" }], ["github"]] : [["list"]],
+  reporter: [["list"]],
   use: {
     baseURL: BASE_URL,
     trace: "retain-on-failure",
@@ -44,7 +41,7 @@ module.exports = defineConfig({
   webServer: process.env.BASE_URL ? undefined : {
     command: "node tests/server.js",
     url: BASE_URL,
-    reuseExistingServer: !CI,
+    reuseExistingServer: true,
     env: { PORT: String(PORT) }
   }
 });

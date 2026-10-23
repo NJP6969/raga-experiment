@@ -1,4 +1,4 @@
-// Quick checks that also run against the live site after each deploy (npm run test:smoke with BASE_URL set).
+// Quick checks (npm run test:smoke). With BASE_URL set they run against any copy of the site, e.g. the live one.
 // They never upload anything: ?nosave=1, and the data server is blocked.
 const { test, expect, fillIntro, press, isTouch } = require("./helpers");
 

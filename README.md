@@ -2,7 +2,7 @@
 
 Static page, no install. Open `index.html` in Chrome or Edge, or host the folder (GitHub Pages, any shared drive web server). Audio autoplay needs a click first, and the page always has one. Works on phones, tablets (iPad), laptops and desktops, in a light or dark theme.
 
-The site itself is `index.html` (the task), `test.html` (stimulus check), `assets/` (shared theme colours and theme switching) and `stimuli/`. Everything else (`tests/`, `package.json`, `.github/`) is only for testing and CI/CD and is not needed to run the task.
+The site itself is `index.html` (the task), `test.html` (stimulus check), `assets/` (shared theme colours and theme switching) and `stimuli/`. Everything else (`tests/`, `package.json`, `playwright.config.js`) is only for testing and is not needed to run the task.
 
 ## Stimuli
 Raga Shankarabharanam (S R2 G3 M1 P D2 N3: exactly the Western major scale; Bilawal in Hindustani music), Adi talam, Sa = Eb. Built from real recorded samples by `make_stimuli.py`:
@@ -63,7 +63,7 @@ At the end the page uploads two CSVs to DataPipe (experiment `hmU1FxSIMrPB`), wh
 - Hearing and volume are self-reported and self-set.
 
 ## Tests
-Browser tests (Playwright) check every feature on six device profiles: desktop (1920×1080), laptop (1366×768), iPad portrait and landscape, and Android and iPhone phones. In CI the iPhone, iPad and Mac are also tested on the real Safari engine (WebKit). A fake clock skips the 30 s lead-ins and digit timings, so a complete session runs in about 30 seconds. The data server is always blocked, so tests never upload anything.
+Browser tests (Playwright) check every feature on six device profiles: desktop (1920×1080), laptop (1366×768), iPad portrait and landscape, and Android and iPhone phones. Projects for the real Safari engine (WebKit) on iPhone, iPad and Mac are included but not run by default and have not been checked (`PW_WEBKIT=1` turns them on). A fake clock skips the 30 s lead-ins and digit timings, so a complete session runs in about 30 seconds. The data server is always blocked, so tests never upload anything.
 
 ```
 npm ci
@@ -83,15 +83,10 @@ npm run test:smoke                  # quick checks; BASE_URL=https://... runs th
 | `tests/theme.spec.js` | System/Light/Dark, following the device live, remembered across pages, switcher on `test.html`, colour contrast in both themes |
 | `tests/progress.spec.js` | Bar only on the first page of each phase, correct labels, only increases, resumed sessions |
 | `tests/responsive.spec.js` | No sideways scrolling, touch targets ≥ 44 px, inputs ≥ 16 px (no iPhone zoom), keypad fits the screen |
-| `tests/smoke.spec.js` | Pages, theme files and music files load (also run against the live site) |
+| `tests/smoke.spec.js` | Pages, theme files and music files load (with `BASE_URL`, also against the live site) |
 
-## CI/CD
-`.github/workflows/ci-cd.yml` runs on every push and pull request:
-1. **Browser tests**, in parallel: desktop + laptop, iPad, phones, and the Safari engine (iPhone, iPad, Mac). Test reports are kept as artifacts.
-2. **Analysis pipeline** on simulated data (`simulate.py` → `analyze.py`), checking the exclusions and the final sample.
-3. **Site bundle**: only the served files, smoke-tested, uploaded as an artifact.
-4. **Deploy** (main only). GitHub Pages currently publishes `main` by itself (Settings → Pages → "Deploy from a branch"), so a push to main goes live whether or not the tests pass. To publish only after every test passes, set Settings → Pages → Source to **GitHub Actions** and add the repository variable `PAGES_DEPLOY` = `actions` (Settings → Secrets and variables → Actions → Variables). Also recommended: protect `main` so pull requests need the CI checks to pass.
-5. **Live check** (main only): waits until GitHub Pages serves the new commit, then runs the smoke tests against the live site on desktop, laptop, iPad and phones (Chromium and Safari engine). Set the variable `LIVE_URL` if the site moves to another address.
+## Publishing
+GitHub Pages publishes `main` (Settings → Pages → "Deploy from a branch"), so anything merged into `main` goes live straight away. Run `npm test` before merging.
 
-Development happens on the `dev` branch; merge into `main` (ideally through a pull request with green CI) to publish.
+Development happens on the `dev` branch; merge into `main` (after `npm test` passes) to publish.
 
