@@ -33,7 +33,10 @@
   .scale button.on span { color:var(--accent-fg); }
   .scale button.on { background:var(--accent); color:var(--accent-fg); border-color:var(--accent); }
   .ends { display:flex; justify-content:space-between; font-size:.85rem; color:var(--muted); }
-  .bar { height:6px; background:var(--track); border-radius:3px; margin-bottom:24px; }
+  .progress { margin-bottom:20px; }
+  .progress-meta { display:flex; justify-content:space-between; gap:12px; margin-bottom:6px; font-size:.85rem; color:var(--muted); }
+  .progress-meta #progLabel { color:var(--fg); font-weight:600; }
+  .bar { height:6px; background:var(--track); border-radius:3px; overflow:hidden; }
   .bar > div { height:100%; background:var(--accent); border-radius:3px; transition:width .3s; }
   .warn { background:var(--warn-bg); color:var(--warn-fg); border:1px solid var(--warn-line); border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:.9rem; }
   table { width:100%; border-collapse:collapse; font-size:.9rem; margin:12px 0; }
@@ -89,7 +92,10 @@
 </head>
 <body>
 <main>
-  <div class="bar"><div id="prog" style="width:0%"></div></div>
+  <div class="progress" id="progress" hidden>
+    <div class="progress-meta"><span id="progLabel"></span><span id="progPct"></span></div>
+    <div class="bar" role="progressbar" aria-labelledby="progLabel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="prog" style="width:0%"></div></div>
+  </div>
   <div id="warn"></div>
   <div id="app"></div>
 </main>
@@ -175,7 +181,7 @@ function resumePrompt(st) {
       <p>This computer has an unfinished session (${st.P.name ? `<b>${esc(st.P.name)}</b>, ` : ""}ID <b>${esc(st.P.id)}</b>, started ${new Date(st.savedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}). ${what}</p>
       <p class="muted">${st.finished ? "" : "Continuing restarts the block you were in, from its beginning."}</p>
       <button id="cont">${st.finished ? "Save my answers" : "Continue my session"}</button>
-      <button id="fresh" class="secondary">Start over</button></div>`);
+      <button id="fresh" class="secondary">Start over</button></div>`, "resume", st);
     document.getElementById("cont").onclick = () => { unlockAudio(); keepAwake(); res(true); };
     document.getElementById("fresh").onclick = () => res(false);
   });
@@ -185,11 +191,40 @@ function resumePrompt(st) {
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const nextFrame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r())));
 function warn(msg) { document.getElementById("warn").innerHTML = msg ? `<div class="warn">${msg}</div>` : ""; }
-function setProg(f) { document.getElementById("prog").style.width = Math.round(f * 100) + "%"; }
-function show(html) { app.innerHTML = html; }
-function screen(html, btn = "Continue") {
+/* Progress bar: shown only on the first page of each phase, with how much of the whole session is done.
+   The five blocks are most of the time, so they take 15-100%. Every other page hides the bar. */
+const BLOCK_START = 0.15, BLOCK_SPAN = (1 - BLOCK_START) / 5;
+const PHASES = {
+  intro:    () => [0, "Intro"],
+  setup:    () => [0.04, "Setup"],
+  testing:  () => [0.07, "Practice"],
+  pre:      () => [0.12, "Questions before the task"],
+  about:    b => b == null ? [0.14, "About the task"] : [BLOCK_START + b * BLOCK_SPAN, `Block ${b + 1} of 5`],
+  continue: b => [BLOCK_START + b * BLOCK_SPAN, "About the task"],
+  post:     b => [BLOCK_START + (b + 0.85) * BLOCK_SPAN, `Questions after block ${b + 1}`],
+  resume:   st => [savedProgress(st), "Welcome back"],
+  done:     () => [1, "Finished"]
+};
+let progFloor = 0;                           // a resumed session never shows less than it had reached
+function savedProgress(st) {
+  return st.finished ? 1 : st.nextBlock > 0 ? BLOCK_START + st.nextBlock * BLOCK_SPAN
+    : st.baselineDone ? PHASES.pre()[0] : st.practiceDone ? PHASES.testing()[0] : PHASES.setup()[0];
+}
+function setBar(phase, arg) {
+  const box = document.getElementById("progress");
+  if (!phase) { box.hidden = true; return; }
+  const [f, label] = PHASES[phase](arg);
+  const pct = Math.round(Math.max(f, progFloor) * 100);
+  document.getElementById("progLabel").textContent = label;
+  document.getElementById("progPct").textContent = `${pct}% done`;
+  document.getElementById("prog").style.width = pct + "%";
+  box.querySelector(".bar").setAttribute("aria-valuenow", pct);
+  box.hidden = false;
+}
+function show(html, phase = null, arg = null) { app.innerHTML = html; setBar(phase, arg); }
+function screen(html, btn = "Continue", phase = null, arg = null) {
   return new Promise(res => {
-    show(`<div class="card">${html}<button id="go">${btn}</button></div>`);
+    show(`<div class="card">${html}<button id="go">${btn}</button></div>`, phase, arg);
     const go = document.getElementById("go"); go.focus();
     go.onclick = () => { go.disabled = true; res(); };
   });
@@ -283,7 +318,7 @@ async function setup() {
     <input id="trn" type="number" min="0" max="60" value="0">
     <label><input id="hear" type="checkbox" style="margin-right:8px">I have normal or corrected hearing and I am wearing headphones.</label>
     <button id="start" disabled>Begin</button>
-  </div>`);
+  </div>`, "intro");
   const $ = id => document.getElementById(id);
   const hear = $("hear"), start = $("start"), pid = $("pid"), pname = $("pname");
   const courseVal = () => (document.querySelector('input[name="course"]:checked') || {}).value;
@@ -345,7 +380,7 @@ async function themePage() {
       <div class="preview-scale"><span>1</span><span>2</span><span>3</span><span class="on">4</span><span>5</span></div>
       <p class="muted preview-note">Numbers, the keypad and the rating buttons will look like this.</p>
     </div>
-    <button id="go">Continue</button></div>`);
+    <button id="go">Continue</button></div>`, "setup");
   document.querySelectorAll('input[name="theme"]').forEach(r => r.onchange = () => Theme.set(r.value));
   const go = document.getElementById("go"); go.focus();
   await new Promise(res => go.onclick = () => { go.disabled = true; res(); });
@@ -440,7 +475,7 @@ const SCALES = {
   mood:      ["During this block, how was your mood?",       ["Very bad", "Bad", "Neutral", "Good", "Very good"]],
   indian:    ["How Indian did the music sound?",             ["Not at all", "Slightly", "Moderately", "Quite", "Very Indian"]]
 };
-function ratings(cond, baseline = false) {
+function ratings(cond, baseline = false, pos = null) {
   return new Promise(res => {
     const keys = baseline ? ["alertness", "mood"] : ["alertness", "mood"].concat(CONDITIONS[cond].file ? ["indian"] : []);
     const q = k => baseline ? SCALES[k][0].replace("During this block, how", "Right now, how").replace("did you feel", "do you feel").replace("was your mood", "is your mood") : SCALES[k][0];
@@ -449,7 +484,7 @@ function ratings(cond, baseline = false) {
       ${baseline ? `<p class="muted">Two quick questions about how you feel right now.</p>` : `<p class="muted">The first two are about <b>you</b> during the block${keys.includes("indian") ? "; the last is about <b>the music</b>" : ""}.</p>`}
       ${keys.map(k => `<label>${q(k)}</label><div class="scale" data-k="${k}">${SCALES[k][1].map((t, i) =>
         `<button data-v="${i + 1}"><b>${i + 1}</b><span>${t}</span></button>`).join("")}</div>`).join("")}
-      <button id="next" disabled>Continue</button></div>`);
+      <button id="next" disabled>Continue</button></div>`, baseline ? "pre" : "post", pos);
     const next = document.getElementById("next");
     document.querySelectorAll(".scale").forEach(sc => sc.querySelectorAll("button").forEach(b => b.onclick = () => {
       sc.querySelectorAll("button").forEach(x => x.classList.remove("on")); b.classList.add("on");
@@ -487,12 +522,11 @@ async function runBlock(pos, key) {
   const c = CONDITIONS[key];
   const rng = mulberry32(P.seed + pos * 7919);
   const ctx = { block_position: pos + 1, condition: key, style: c.style, tempo: c.tempo };
-  setProg(pos / 5);
   show(`<div class="card"><h2>Block ${pos + 1} of 5</h2>
     <p>${c.file ? "Music will start. For the first 30 seconds, just listen. Then the number lists begin <b>while the music keeps playing</b>." : "This block is <b>quiet</b>. For the first 30 seconds, just sit still. Then the number lists begin."}</p>
     <p class="muted">Keep your eyes on the screen and don't change the volume.</p>
     <p class="muted" id="load"></p>
-    <button id="go" disabled>Start block</button></div>`);
+    <button id="go" disabled>Start block</button></div>`, "about", pos);
   if (c.file && players[key].readyState < 4) document.getElementById("load").textContent = "Loading music…";
   const ok = await waitAudio(key);
   document.getElementById("load").textContent = ok ? "" : "The music is taking long to load; it will start as soon as it can.";
@@ -507,7 +541,7 @@ async function runBlock(pos, key) {
   await cue(`<div class="cue">Numbers</div><p class="muted">Remember the order. Type them back in the same order.</p>`);
   const rc = await runRecall(rng, ctx);
   stopMusic(); inBlock = false; warn("");
-  const rat = await ratings(key);
+  const rat = await ratings(key, false, pos);
   for (const [k, v] of Object.entries(rat)) log({ ...ctx, task: "rating", stimulus: k, response: v });
   blockSummaries.push({
     participant: P.id, session_id: P.session, music_course: P.musicCourse, full_name: P.name, test_run: FAST ? 1 : 0, block_position: pos + 1, condition: key, label: c.label, style: c.style, tempo: c.tempo,
@@ -556,7 +590,6 @@ function uploadProgress(blocksDone) {         // cumulative trials so far; fire-
 }
 
 async function finish() {
-  setProg(1);
   const sorted = [...blockSummaries].sort((a, b) => a.condition.localeCompare(b.condition));
   const base = fileBase();
   const files = [[`${base}_trials.csv`, toCSV(rows)], [`${base}_blocks.csv`, toCSV(blockSummaries)]];
@@ -566,7 +599,7 @@ async function finish() {
     <h2 style="margin-top:24px">Your results</h2>
     <table><tr><th>Condition</th><th>Numbers recalled</th><th>Alert</th><th>Mood</th><th>Indian</th></tr>
     ${sorted.map(b => `<tr><td>${b.label}</td><td>${fmt(b.recall_prop_correct * 100)}%</td><td>${b.alertness}</td><td>${b.mood}</td><td>${b.indian || "–"}</td></tr>`).join("")}</table>
-    <p class="muted">One person's numbers are noisy and do not show an effect on their own. The class data are what count.</p></div>`);
+    <p class="muted">One person's numbers are noisy and do not show an effect on their own. The class data are what count.</p></div>`, "done");
   const status = document.getElementById("saveStatus"), actions = document.getElementById("saveActions");
   const downloads = `<button id="d1" class="secondary">Download trial data</button> <button id="d2" class="secondary">Download block summary</button>`;
   const wireDownloads = () => {
@@ -616,7 +649,7 @@ async function runBaseline() {               // one "right now" alertness/mood r
     Object.assign(S, { nextBlock: saved.nextBlock, practiceDone: saved.practiceDone, baselineDone: !!saved.baselineDone, finished: saved.finished });
     window.addEventListener("beforeunload", leaveGuard);
     for (const a of Object.values(players)) a.load();
-    setProg(S.nextBlock / 5);
+    progFloor = savedProgress(S);
     if (S.finished) { await finish(); return; }
   } else {
     clearState();
@@ -629,15 +662,15 @@ async function runBaseline() {               // one "right now" alertness/mood r
     await screen(`<h2>The task: number lists</h2>
       <p>${RECALL_LEN} digits appear one at a time. Then type them back <b>in the same order</b>.</p>
       <p>Each list uses all the digits 1–9 once, in a random order. Example: you see 4, 9, 2, … → you enter 4 9 2 …. If you forget one, enter <b>–</b> in its place so the others stay in the right position. Tap the on-screen keys, or type on a keyboard.</p>
-      <p class="muted">There is no time limit for typing; the music simply keeps playing until you finish. It is meant to be hard; most people get about half to two-thirds right. Two practice lists first, without music.</p>`, "Try the practice lists");
+      <p class="muted">There is no time limit for typing; the music simply keeps playing until you finish. It is meant to be hard; most people get about half to two-thirds right. Two practice lists first, without music.</p>`, "Try the practice lists", "testing");
     await runRecall(mulberry32(1), {}, true, 2);
     S.practiceDone = true; saveState();
     await runBaseline();
     await screen(`<h2>Ready</h2><p>Five blocks follow, about 3 minutes each, each with different background music or silence. Each block starts with 30 seconds of just listening, then ${RECALL_LISTS} number lists (the screen shows "List 1 of ${RECALL_LISTS}" and so on). No time limit: the music keeps playing until you finish the last list.</p>
-      <p class="muted">Don't change your volume, and keep this tab in front until the end. If the page closes by accident, open the link again on this computer to continue.</p>`, "Start");
+      <p class="muted">Don't change your volume, and keep this tab in front until the end. If the page closes by accident, open the link again on this computer to continue.</p>`, "Start", "about");
   } else {
     await runBaseline();
-    await screen(`<h2>Continuing</h2><p>Next is block ${S.nextBlock + 1} of 5. As before: 30 seconds of listening, then ${RECALL_LISTS} number lists, typed back in the same order.</p>`, "Continue");
+    await screen(`<h2>Continuing</h2><p>Next is block ${S.nextBlock + 1} of 5. As before: 30 seconds of listening, then ${RECALL_LISTS} number lists, typed back in the same order.</p>`, "Continue", "continue", S.nextBlock);
   }
   for (let i = S.nextBlock; i < 5; i++) {
     await runBlock(i, P.order[i]);
