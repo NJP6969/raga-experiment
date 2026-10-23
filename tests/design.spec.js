@@ -41,9 +41,11 @@ test.describe("design tokens", () => {
 test.describe("template page", () => {
   test("shows headings, colours, buttons, fields, notices and tables", async ({ page }) => {
     await page.goto("template.html");
-    for (const h of ["Page template", "Start a new page", "Headings and text", "Colours", "Buttons", "Form fields", "Notices, progress and tables"])
+    for (const h of ["Page template", "Start a new page", "Headings and text", "Colours", "Page layout", "Buttons", "Form fields", "Notices, progress and tables"])
       await expect(page.getByRole("heading", { name: h, exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Continue" })).toBeEnabled();
+    for (const part of [".site-header .brand", ".page-head .lead", ".steps", ".checklist", ".facts", ".checks .check", ".actions", ".site-footer"])
+      await expect(page.locator(part).first(), part).toBeVisible();
+    await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeEnabled();
     await expect(page.getByRole("button", { name: "Not yet" })).toBeDisabled();
     await expect(page.getByRole("radio", { name: "Yes" })).toBeChecked();
     await expect(page.getByRole("progressbar")).toBeVisible();

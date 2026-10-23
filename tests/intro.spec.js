@@ -1,7 +1,7 @@
-// First page: "Are you part of the Music Course?"
+// "About you" page (after consent): "Are you part of the Music Course?"
 //   Yes -> full name and roll number, both required.   No -> roll number only, optional.
 // A roll number, when given, must be exactly 10 digits.
-const { test, expect, TASK, open, press, isTouch } = require("./helpers");
+const { test, expect, TASK, open, press, isTouch, acceptConsent } = require("./helpers");
 
 const begin = page => page.locator("#start");
 async function answerOthers(page) {                       // every field except the course question, name and roll number
@@ -13,7 +13,7 @@ const course = (page, v) => page.getByRole("radio", { name: v === "yes" ? "Yes" 
 const saved = page => page.evaluate(() => JSON.parse(localStorage.getItem("raga_state_v1") || "null"));
 
 test.describe("intro page", () => {
-  test.beforeEach(async ({ page }) => { await open(page, TASK, { clock: false }); });
+  test.beforeEach(async ({ page }) => { await open(page, TASK, { clock: false }); await acceptConsent(page); });
 
   test("asks about the Music Course first; Begin waits for an answer", async ({ page }) => {
     await expect(page.getByRole("group", { name: "Are you part of the Music Course?" })).toBeVisible();
@@ -94,6 +94,7 @@ test.describe("intro page", () => {
     await expect.poll(() => saved(page)).not.toBeNull();
     const { P } = await saved(page);
     expect(P).toMatchObject({ id: "2023102029", musicCourse: 1, name: "Priya Raman" });
+    expect(Date.now() - Date.parse(P.consentAt), "consent time recorded").toBeLessThan(60_000);
   });
 
   test("not in the course, no roll number: gets a unique anonymous ID", async ({ page }, testInfo) => {

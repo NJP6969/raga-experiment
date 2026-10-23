@@ -4,9 +4,10 @@ const { test, expect, fillIntro, press, isTouch } = require("./helpers");
 
 test("@smoke task page loads with its theme files", async ({ page }) => {
   await page.goto("index.html?nosave=1&row=1");
-  await expect(page.getByRole("heading", { name: "Music and Memory Task" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Welcome", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your data and privacy" })).toBeVisible();
   expect(await page.evaluate(() => typeof Theme === "object" && getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() !== "")).toBe(true);
-  await expect(page.locator("#start")).toBeDisabled();
+  await expect(page.locator("#agree")).toBeDisabled();
   await expect(page.locator("#progress")).toBeVisible();
 });
 

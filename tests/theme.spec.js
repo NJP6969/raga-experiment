@@ -71,7 +71,7 @@ test.describe("theme", () => {
       const c = await tokens(page);
       for (const [fg, bg] of [["fg", "bg"], ["fg", "card"], ["muted", "bg"], ["muted", "card"], ["accent-fg", "accent"], ["accent", "card"],
                               ["ok", "card"], ["bad", "card"], ["warn-fg", "warn-bg"], ["fg", "accent-soft"],
-                              ["heading", "bg"], ["heading", "card"], ["accent-fg", "accent-hover"]])
+                              ["heading", "bg"], ["heading", "card"], ["accent-fg", "accent-hover"], ["accent", "accent-soft"]])
         expect(contrast(c[fg], c[bg]), `${fg} on ${bg}`).toBeGreaterThanOrEqual(4.5);
       expect(contrast(c["line-strong"], c.card), "input borders").toBeGreaterThanOrEqual(3);
       expect(contrast(c["line-strong"], c.bg), "key borders on the page background").toBeGreaterThanOrEqual(3);

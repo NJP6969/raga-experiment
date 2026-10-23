@@ -18,7 +18,7 @@ test.describe("setup flow", () => {
   test("intro -> theme -> volume -> practice, in that order", async ({ page }, testInfo) => {
     const touch = isTouch(testInfo);
     await open(page, TASK);
-    await expect(heading(page, "Music and Memory Task")).toBeVisible();
+    await expect(heading(page, "Welcome")).toBeVisible();
     await toThemePage(page, touch);
     await press(page, page.locator("#go"), touch);
     await expect(heading(page, "Set your volume")).toBeVisible();

@@ -17,6 +17,8 @@ test("every page fits the screen; touch targets and inputs are comfortable", asy
   test.setTimeout(120_000);
   const touch = isTouch(testInfo);
   await open(page, TASK);
+  await noSideScroll(page, "consent");
+  if (touch) await minSize(page.locator(".check"), 44, "consent tick boxes");
   await fillIntro(page);
   await noSideScroll(page, "intro");
   const fontSizes = await page.locator("input[type=text], input[type=number], select").evaluateAll(els => els.map(e => parseFloat(getComputedStyle(e).fontSize)));

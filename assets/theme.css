@@ -11,6 +11,12 @@ body {
   margin: 0; background: var(--bg); color: var(--fg);
   font-family: var(--font-body); font-size: var(--text-body); line-height: var(--leading-body);
   -webkit-font-smoothing: antialiased;
+  min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column;   /* footer stays at the bottom */
+}
+main { flex: 1 0 auto; width: 100%; }
+/* Page width: 640px unless the page sets --page-width (e.g. :root { --page-width: 720px; }). */
+main, .site-header-inner, .site-footer {
+  max-width: var(--page-width, 640px); margin-left: auto; margin-right: auto; padding-left: 16px; padding-right: 16px;
 }
 h1, h2, h3 {
   margin: 0 0 var(--space-3); color: var(--heading);
@@ -36,12 +42,75 @@ pre {
   background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-md);
 }
 
+/* ---------- site header and footer ----------
+   <header class="site-header"><div class="site-header-inner"><span class="brand">…</span>…</div></header>
+   <footer class="site-footer">…</footer> */
+.site-header { background: var(--card); border-bottom: 1px solid var(--line); }
+.site-header-inner {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: var(--space-2) var(--space-4); min-height: 64px; padding-top: 10px; padding-bottom: 10px;
+}
+.brand {
+  display: inline-flex; align-items: center; gap: 10px; color: var(--heading); text-decoration: none;
+  font-family: var(--font-heading); font-weight: var(--weight-heading); font-size: 1.125rem; line-height: 1.2;
+}
+.brand-mark {
+  flex: none; display: grid; place-items: center; width: 36px; height: 36px;
+  border-radius: var(--radius-md); background: var(--accent-soft); color: var(--accent);
+}
+.brand-mark svg { width: 22px; height: 22px; }
+.site-tag { color: var(--muted); font-size: var(--text-sm); }
+.site-footer {
+  width: 100%; padding-top: var(--space-5); padding-bottom: var(--space-6);
+  color: var(--muted); font-size: var(--text-sm); text-align: center;
+}
+
+/* ---------- page heading: title and a short introduction above the cards ----------
+   <header class="page-head"><p class="eyebrow">…</p><h1>…</h1><p class="lead">…</p></header> */
+.page-head { margin: 0 0 var(--space-5); }
+.page-head h1 { margin-bottom: var(--space-2); }
+.lead { margin: 0; color: var(--muted); font-size: 1.0625em; }
+
 /* ---------- surfaces ---------- */
 .card {
   background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-lg);
   padding: var(--space-5); box-shadow: var(--shadow-card);
 }
 @media (min-width: 560px) { .card { padding: var(--space-6); } }
+.card + .card { margin-top: var(--space-4); }
+.card > :last-child { margin-bottom: 0; }
+/* Buttons at the end of a page or card */
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin-top: var(--space-5); }
+.card .actions { margin-top: var(--space-4); }
+.actions > button { margin: 0; }
+
+/* ---------- lists ---------- */
+/* Numbered steps: <ol class="steps"><li><b>Title</b><span>detail</span></li>…</ol> */
+.steps { list-style: none; counter-reset: step; margin: 0; padding: 0; }
+.steps li { counter-increment: step; position: relative; padding: 2px 0 var(--space-4) 46px; }
+.steps li:last-child { padding-bottom: 0; }
+.steps li::before {
+  content: counter(step); position: absolute; left: 0; top: 0; width: 30px; height: 30px; border-radius: 50%;
+  display: grid; place-items: center; background: var(--accent-soft); color: var(--accent);
+  font-size: var(--text-sm); font-weight: var(--weight-strong);
+}
+.steps li:not(:last-child)::after { content: ""; position: absolute; left: 15px; top: 34px; bottom: 4px; width: 1px; background: var(--line); }
+.steps b { display: block; font-weight: var(--weight-strong); }
+.steps span { display: block; color: var(--muted); font-size: var(--text-sm); }
+/* Ticked list: <ul class="checklist"><li>…</li></ul> */
+.checklist { list-style: none; margin: 0; padding: 0; }
+.checklist li { position: relative; padding-left: 32px; }
+.checklist li + li { margin-top: var(--space-3); }
+.checklist li::before { content: ""; position: absolute; left: 0; top: .2em; width: 20px; height: 20px; border-radius: 50%; background: var(--accent-soft); }
+.checklist li::after {
+  content: ""; position: absolute; left: 7px; top: calc(.2em + 4px); width: 6px; height: 10px;
+  border: solid var(--accent); border-width: 0 2px 2px 0; transform: rotate(45deg);
+}
+/* Label and text pairs: <dl class="facts"><dt>What we record</dt><dd>…</dd>…</dl> */
+.facts { margin: 0; }
+.facts dt { margin-top: var(--space-4); color: var(--heading); font-weight: var(--weight-strong); }
+.facts dt:first-child { margin-top: 0; }
+.facts dd { margin: var(--space-1) 0 0; }
 .warn {                                      /* notice */
   background: var(--warn-bg); color: var(--warn-fg); border: 1px solid var(--warn-line);
   border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: var(--space-4); font-size: var(--text-sm);
@@ -89,6 +158,18 @@ fieldset.choice legend { font-weight: var(--weight-strong); padding: 0; margin-b
 .seg span { display: block; text-align: center; padding: 10px; border: 1px solid var(--line-strong); border-radius: var(--radius-md); background: var(--card); }
 .seg input:checked + span { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: var(--weight-strong); }
 .seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Tick boxes as large rows (consent, confirmations):
+   <div class="checks"><label class="check"><input type="checkbox"><span>I agree …</span></label>…</div> */
+.checks { display: grid; gap: var(--space-2); }
+.check {
+  display: flex; align-items: flex-start; gap: var(--space-3); margin: 0; padding: 12px 14px; cursor: pointer;
+  font-weight: var(--weight-regular); border: 1px solid var(--line-strong); border-radius: var(--radius-md); background: var(--card);
+}
+.check input { flex: none; width: 20px; height: 20px; margin: 2px 0 0; cursor: pointer; }
+.check:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.check:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.check input:focus-visible { outline: none; }
 
 /* Theme switch; theme.js wires it up and marks the active choice:
    <div class="theme-switch" role="group" aria-label="Theme"><button type="button" data-theme-choice="system">System</button>…</div> */

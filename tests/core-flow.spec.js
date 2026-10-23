@@ -28,6 +28,7 @@ test.describe("core experiment flow", () => {
     expect(recall.map(r => r.condition).filter((c, i, a) => c !== a[i - 1]).join("")).toBe("ABECD");
     expect(recall.every(r => r.participant === "2023102029" && r.test_run === "1" && r.order === "ABECD")).toBe(true);
     expect(recall.every(r => r.music_course === "1" && r.full_name === "Test Student")).toBe(true);
+    expect(trials.every(r => /^\d{4}-\d\d-\d\dT[\d:.]+Z$/.test(r.consent_time)), "consent time on every row").toBe(true);
     expect(recall.every(r => r.theme === "system" && r.theme_resolved === "light")).toBe(true);
     expect(recall[0].input).toBe(touch ? "keypad" : "keyboard");
     expect(recall[0].device).toBe(touch ? "touch" : "computer");
