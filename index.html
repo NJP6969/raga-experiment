@@ -290,7 +290,7 @@ async function runRecall(rng, ctx, feedback = false, n = RECALL_LISTS) {
       await sleep(2200);
     } else {
       log({ ...ctx, task: "recall", trial: i + 1, list_length: RECALL_LEN, stimulus: d.join(""), response: r.v,
-            n_correct_positions: hits, correct: hits === RECALL_LEN ? 1 : 0, rt_ms: r.rt.toFixed(0) });
+            n_correct_positions: hits, correct: hits === RECALL_LEN ? 1 : 0, rt_ms: r.rt.toFixed(0), tab_hidden_so_far: hiddenCount });
       show(`<div class="stage"></div>`); await sleep(400);
     }
   }
