@@ -26,8 +26,6 @@
   .big { font-size:5rem; font-weight:700; letter-spacing:.02em; line-height:1.1; }
   .fix { font-size:4rem; color:var(--muted); line-height:1; }
   .cue { font-size:1.6rem; font-weight:600; }
-  .keys { display:flex; gap:10px; justify-content:center; margin-top:8px; }
-  .keys span { padding:6px 14px; border:1px solid var(--line); border-radius:6px; font-weight:700; }
   .scale { display:flex; gap:8px; margin:6px 0 4px; }
   .scale button { margin:0; flex:1; background:transparent; color:var(--fg); border-color:var(--line); padding:12px 0; }
   .scale button.on { background:var(--accent); color:var(--accent-fg); border-color:var(--accent); }
@@ -59,10 +57,9 @@ const Q = new URLSearchParams(location.search);
 const FAST = Q.has("fast");                 // ?fast=1 shortens lead-in and rest, for piloting
 const SAVE = !Q.has("nosave");              // ?nosave=1 runs without uploading anything
 const DATAPIPE_ID = "hmU1FxSIMrPB";         // DataPipe experiment; files land in its Google Drive folder
-const LEAD_IN_S = FAST ? 3 : 60;
+const LEAD_IN_S = FAST ? 3 : 30;
 const REST_S = FAST ? 2 : 20;
-const RECALL_LEN = 8, RECALL_LISTS = 6;     // serial recall: 6 lists of 8 digits per block
-const STROOP_N = 48;                        // 24 congruent + 24 incongruent per block
+const RECALL_LEN = 8, RECALL_LISTS = 8;     // serial recall: 8 lists of 8 digits per block
 
 const CONDITIONS = {
   A: { label: "Indian style, slow",  style: "raga",    tempo: "slow", file: "stimuli/A_raga_slow.mp3" },
@@ -71,9 +68,9 @@ const CONDITIONS = {
   D: { label: "Western style, fast", style: "western", tempo: "fast", file: "stimuli/D_western_fast.mp3" },
   E: { label: "Quiet",               style: "quiet",   tempo: "none", file: null }
 };
-const LATIN = ["ABCDE", "BCDEA", "CDEAB", "DEABC", "EABCD"];  // cyclic 5x5
-const WORDS = { r: "RED", g: "GREEN", b: "BLUE", y: "YELLOW" };
-const INK = { RED: "#d62828", GREEN: "#2a9d3f", BLUE: "#2b59d6", YELLOW: "#d4a800" };
+// Williams design for 5 conditions: each condition appears in each position twice and directly
+// follows every other condition twice across the 10 orders (balances first-order carry-over).
+const ORDERS = ["ABECD", "BCADE", "CDBEA", "DECAB", "EADBC", "DCEBA", "EDACB", "AEBDC", "BACED", "CBDAE"];
 
 /* ---------- state ---------- */
 const app = document.getElementById("app");
@@ -115,7 +112,7 @@ function mean(a) { return a.length ? a.reduce((x, y) => x + y, 0) / a.length : N
 function fmt(x, d = 0) { return Number.isFinite(x) ? x.toFixed(d) : "–"; }
 
 function log(r) {
-  rows.push({ participant: P.id, session_id: P.session, test_run: FAST ? 1 : 0, latin_row: P.row + 1, fam_carnatic: P.famC, fam_hindustani: P.famH, training_years: P.training,
+  rows.push({ participant: P.id, session_id: P.session, test_run: FAST ? 1 : 0, order_row: P.row + 1, order: P.order.join(""), order_source: P_orderSource, fam_carnatic: P.famC, fam_hindustani: P.famH, training_years: P.training,
               audio_ok: audioOK, timestamp: new Date().toISOString(), ...r });
   try { localStorage.setItem("raga_backup_" + P.session, JSON.stringify(rows)); } catch (e) {}
 }
@@ -143,16 +140,33 @@ function waitAudio(key, maxMs = 30000) {       // resolves when the track can pl
 }
 
 /* ---------- setup ---------- */
+async function assignOrder() {             // next order in rotation from DataPipe; random if unavailable
+  if (SAVE && !FAST) {
+    try {
+      const res = await fetch("https://pipe.jspsych.org/api/condition/", {
+        method: "POST", headers: { "Content-Type": "application/json", Accept: "*/*" },
+        body: JSON.stringify({ experimentID: DATAPIPE_ID }) });
+      if (res.ok) {
+        const d = await res.json();
+        const c = typeof d === "number" ? d : d.condition;
+        if (Number.isInteger(c)) { P_orderSource = "datapipe"; return c % ORDERS.length; }
+      }
+    } catch (e) {}
+  }
+  P_orderSource = "random";
+  return Math.floor(Math.random() * ORDERS.length);
+}
+let P_orderSource = "url";
 async function setup() {
   const touchOnly = matchMedia("(pointer: coarse)").matches && !matchMedia("(pointer: fine)").matches;
   if (touchOnly) {
     show(`<div class="card"><h1>Please use a laptop or desktop</h1>
-      <p>This task needs a physical keyboard. Open this link on a laptop or desktop computer with headphones.</p></div>`);
+      <p>This task needs a physical keyboard for typing digits. Open this link on a laptop or desktop computer with headphones.</p></div>`);
     return new Promise(() => {});
   }
   show(`<div class="card">
     <h1>Music and Memory Task</h1>
-    <p>About 25 minutes. You will do two short tasks five times, with different background music (or silence) each time. Use headphones, sit somewhere quiet, and keep this tab open and in front until the end.</p>
+    <p>About 17 minutes. You will do one short memory task five times, with different background music (or silence) each time. Use headphones, sit somewhere quiet, and keep this tab open and in front until the end.</p>
     <p class="muted">Participation is voluntary and anonymous. You can stop at any time by closing the page. Your answers are saved for the class study when you finish.</p>
     <label for="pid">Participant ID</label>
     <input id="pid" type="text" value="${Math.random().toString(36).slice(2, 6).toUpperCase()}" maxlength="12">
@@ -172,8 +186,8 @@ async function setup() {
   const id = document.getElementById("pid").value.trim() || "anon";
   P = { id, famC: +document.getElementById("famC").value, famH: +document.getElementById("famH").value,
         training: Math.max(0, +document.getElementById("trn").value || 0),
-        row: Q.has("row") ? (+Q.get("row") - 1) % 5 : Math.floor(Math.random() * 5) };
-  P.order = LATIN[P.row].split("");
+        row: Q.has("row") ? (+Q.get("row") - 1) % ORDERS.length : await assignOrder() };
+  P.order = ORDERS[P.row].split("");
   P.session = Math.random().toString(36).slice(2, 10);       // unique even if two students type the same ID
   P.seed = hash(id + P.session);
   window.addEventListener("beforeunload", leaveGuard);
@@ -189,58 +203,6 @@ async function volumeCheck() {
   const ok = document.getElementById("ok"); ok.disabled = false; ok.focus();
   await new Promise(res => ok.onclick = res);
   stopMusic();
-}
-
-/* ---------- Stroop ---------- */
-function stroopList(rng, n) {
-  const ws = Object.values(WORDS);
-  const base = [];
-  for (const w of ws) for (let k = 0; k < n / 8; k++) base.push({ word: w, ink: w, congruent: 1 });        // n/2 congruent
-  for (let k = 0; k < n / 24; k++) for (const w of ws) for (const ink of ws) if (ink !== w) base.push({ word: w, ink, congruent: 0 }); // n/2 incongruent
-  for (let tries = 0; tries < 500; tries++) {                // no identical repeats, no ink 3 times running
-    const l = shuffle(base.slice(), rng);
-    const bad = l.some((t, i) => i > 0 && ((t.word === l[i - 1].word && t.ink === l[i - 1].ink) ||
-                                           (i > 1 && t.ink === l[i - 1].ink && t.ink === l[i - 2].ink)));
-    if (!bad) return l;
-  }
-  return shuffle(base, rng);
-}
-function stroopTrial(t, feedback) {
-  return new Promise(async res => {
-    show(`<div class="stage"><div class="fix">+</div></div>`);
-    await sleep(500);
-    show(`<div class="stage"><div class="big" style="color:${INK[t.ink]}">${t.word}</div>
-          <div class="keys" style="margin-top:28px"><span>R</span><span>G</span><span>B</span><span>Y</span></div></div>`);
-    await nextFrame();
-    const t0 = performance.now();
-    let done = false;
-    const finish = async (key) => {
-      if (done) return; done = true;
-      document.removeEventListener("keydown", onKey); clearTimeout(timer);
-      const rt = key ? performance.now() - t0 : null;
-      const resp = key ? WORDS[key] : null;
-      const correct = resp === t.ink ? 1 : 0;
-      if (feedback) {
-        show(`<div class="stage"><div class="cue ${key && correct ? "ok" : "bad"}">${key ? (correct ? "Correct" : "Wrong: the ink was " + t.ink.toLowerCase()) : "Too slow"}</div></div>`);
-        await sleep(900);
-      } else { show(`<div class="stage"></div>`); await sleep(250); }
-      res({ resp, correct, rt });
-    };
-    const onKey = e => { if (e.repeat) return; const k = e.key.toLowerCase(); if (WORDS[k]) { e.preventDefault(); finish(k); } };
-    document.addEventListener("keydown", onKey);
-    const timer = setTimeout(() => finish(null), 2000);
-  });
-}
-async function runStroop(rng, ctx, feedback = false, n = STROOP_N) {
-  const list = stroopList(rng, Math.max(n, 48)).slice(0, n);       // practice takes 8 from a balanced 48
-  const out = [];
-  for (let i = 0; i < list.length; i++) {
-    const t = list[i], r = await stroopTrial(t, feedback);
-    out.push({ ...t, ...r });
-    if (!feedback) log({ ...ctx, task: "stroop", trial: i + 1, stimulus: t.word, ink: t.ink, congruent: t.congruent,
-                         response: r.resp ?? "", correct: r.correct, rt_ms: r.rt === null ? "" : r.rt.toFixed(1) });
-  }
-  return out;
 }
 
 /* ---------- serial recall (8 digits, forward order) ---------- */
@@ -340,8 +302,8 @@ async function runBlock(pos, key) {
   const ctx = { block_position: pos + 1, condition: key, style: c.style, tempo: c.tempo };
   setProg(pos / 5);
   show(`<div class="card"><h2>Block ${pos + 1} of 5</h2>
-    <p>${c.file ? "Music will start. For the first minute, just listen. Then the two tasks begin <b>while the music keeps playing</b>." : "This block is <b>quiet</b>. For the first minute, just sit still. Then the two tasks begin."}</p>
-    <p class="muted">Numbers first, then colours. Keep your eyes on the screen and don't change the volume.</p>
+    <p>${c.file ? "Music will start. For the first 30 seconds, just listen. Then the number lists begin <b>while the music keeps playing</b>." : "This block is <b>quiet</b>. For the first 30 seconds, just sit still. Then the number lists begin."}</p>
+    <p class="muted">Keep your eyes on the screen and don't change the volume.</p>
     <p class="muted" id="load"></p>
     <button id="go" disabled>Start block</button></div>`);
   if (c.file && players[key].readyState < 4) document.getElementById("load").textContent = "Loading music…";
@@ -357,18 +319,12 @@ async function runBlock(pos, key) {
   }
   await cue(`<div class="cue">Numbers</div><p class="muted">Remember the order. Type them back in the same order.</p>`);
   const rc = await runRecall(rng, ctx);
-  await cue(`<div class="cue">Colours</div><p class="muted">Press the key for the ink colour.</p>
-    <div class="keys"><span>R red</span><span>G green</span><span>B blue</span><span>Y yellow</span></div>`);
-  const st = await runStroop(rng, ctx);
   stopMusic(); inBlock = false;
-  const rt = (cg) => st.filter(t => t.congruent === cg && t.correct && t.rt !== null).map(t => t.rt);
   const rat = await ratings(key);
   for (const [k, v] of Object.entries(rat)) log({ ...ctx, task: "rating", stimulus: k, response: v });
   blockSummaries.push({
     participant: P.id, session_id: P.session, test_run: FAST ? 1 : 0, block_position: pos + 1, condition: key, label: c.label, style: c.style, tempo: c.tempo,
-    recall_prop_correct: rc.prop, recall_lists_perfect: rc.perfect,
-    stroop_cong_rt: mean(rt(1)), stroop_incong_rt: mean(rt(0)), stroop_interference: mean(rt(0)) - mean(rt(1)),
-    stroop_error_rate: st.filter(t => !t.correct).length / st.length,
+    order: P.order.join(""), recall_prop_correct: rc.prop, recall_lists_perfect: rc.perfect,
     alertness: rat.alertness, mood: rat.mood, indian: rat.indian ?? "",
     tab_hidden_count: hiddenCount, audio_ok: audioOK
   });
@@ -413,8 +369,8 @@ async function finish() {
     <p id="saveStatus"><b>Saving your responses…</b> Please keep this tab open.</p>
     <div id="saveActions"></div>
     <h2 style="margin-top:24px">Your results</h2>
-    <table><tr><th>Condition</th><th>Numbers recalled</th><th>Stroop interf. (ms)</th><th>Errors</th><th>Alert</th><th>Mood</th><th>Indian</th></tr>
-    ${sorted.map(b => `<tr><td>${b.label}</td><td>${fmt(b.recall_prop_correct * 100)}%</td><td>${fmt(b.stroop_interference)}</td><td>${fmt(b.stroop_error_rate * 100)}%</td><td>${b.alertness}</td><td>${b.mood}</td><td>${b.indian || "–"}</td></tr>`).join("")}</table>
+    <table><tr><th>Condition</th><th>Numbers recalled</th><th>Alert</th><th>Mood</th><th>Indian</th></tr>
+    ${sorted.map(b => `<tr><td>${b.label}</td><td>${fmt(b.recall_prop_correct * 100)}%</td><td>${b.alertness}</td><td>${b.mood}</td><td>${b.indian || "–"}</td></tr>`).join("")}</table>
     <p class="muted">One person's numbers are noisy and do not show an effect on their own. The class data are what count.</p></div>`);
   const status = document.getElementById("saveStatus"), actions = document.getElementById("saveActions");
   const downloads = `<button id="d1" class="secondary">Download trial data</button> <button id="d2" class="secondary">Download block summary</button>`;
@@ -453,17 +409,12 @@ async function finish() {
 (async function main() {
   await setup();
   await volumeCheck();
-  await screen(`<h2>Task 1: Numbers</h2>
+  await screen(`<h2>The task: number lists</h2>
     <p>${RECALL_LEN} digits appear one at a time. Then type them back <b>in the same order</b>.</p>
     <p>Example: you see 4, 9, 2, … → you type 4 9 2 …. If you forget one, type <b>-</b> in its place so the others stay in the right position.</p>
     <p class="muted">It is meant to be hard; most people get about half to two-thirds right. Two practice lists first, without music.</p>`, "Try the practice lists");
   await runRecall(mulberry32(1), {}, true, 2);
-  await screen(`<h2>Task 2: Colours</h2>
-    <p>A colour word appears in coloured ink. Press the key for the <b>ink colour</b>, not the word. Be fast and accurate.</p>
-    <div class="keys"><span>R red</span><span>G green</span><span>B blue</span><span>Y yellow</span></div>
-    <p class="muted">Keep two fingers on each hand near R, G, B, Y. Eight practice trials first.</p>`, "Try the practice trials");
-  await runStroop(mulberry32(2), {}, true, 8);
-  await screen(`<h2>Ready</h2><p>Five blocks follow, about 4 minutes each, each with different background music or silence. Each block starts with a minute of just listening.</p>
+  await screen(`<h2>Ready</h2><p>Five blocks follow, about 3 minutes each, each with different background music or silence. Each block starts with 30 seconds of just listening, then ${RECALL_LISTS} number lists.</p>
     <p class="muted">Don't change your volume, and keep this tab in front until the end.</p>`, "Start");
   for (let i = 0; i < 5; i++) await runBlock(i, P.order[i]);
   await finish();
