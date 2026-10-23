@@ -16,7 +16,7 @@ Quiet (E) is silence. The piece has 32 avartanams: pallavi with four sangatis, a
 
 Samples (all real recordings):
 - Violin: VSCO 2 Community Edition, solo violin Arco Vib p (CC0), github.com/sgossner/VSCO-2-CE (SFZ branch).
-- Mridangam: IITM-CompMusic Mridangam Stroke Dataset, D# tonic, Freesound pack 14163 by akshaylaya (CC BY-NC 3.0). Anantapadmanabhan, Bellur and Murthy (2013), ICASSP.
+- Mridangam: IITM-CompMusic Mridangam Stroke Dataset, D# tonic, Freesound pack 14163 by akshaylaya (CC BY-NC 3.0). Anantapadmanabhan, Bellur & Murthy (2013), ICASSP, 181–185, doi:10.1109/ICASSP.2013.6637633.
 - Tanpura: "Tambura_Eb_fat" by Kaczinski, Freesound 506312 (CC0).
 - Western backing: GeneralUser GS soundfont (free licence) via FluidSynth.
 
