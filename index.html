@@ -3,59 +3,89 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f3f1ec">
 <title>Music and Memory Task</title>
+<link rel="stylesheet" href="assets/tokens.css">
+<link rel="stylesheet" href="assets/theme.css">
+<script src="assets/theme.js"></script>
 <style>
-  :root { --bg:#fafaf7; --fg:#1d1d1b; --muted:#6b6b66; --line:#d9d9d2; --accent:#2f5d50; --accent-fg:#fff; --card:#fff; --ok:#2a7a3f; --bad:#b3261e; }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg:#161715; --fg:#ececE6; --muted:#9a9a92; --line:#33342f; --accent:#7fb8a4; --accent-fg:#102019; --card:#1e1f1c; --ok:#7fcf93; --bad:#f2948c; }
-  }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--fg); font:17px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
-  main { max-width:640px; margin:0 auto; padding:32px 16px 64px; min-height:100vh; }
-  h1 { font-size:1.5rem; margin:0 0 .5rem; }
-  h2 { font-size:1.2rem; margin:0 0 .5rem; }
-  p { margin:.5rem 0 1rem; }
-  .muted { color:var(--muted); font-size:.9rem; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:20px; }
-  label { display:block; margin:14px 0 4px; font-weight:600; }
-  input[type=text], input[type=number], select { width:100%; padding:10px; font:inherit; color:var(--fg); background:var(--bg); border:1px solid var(--line); border-radius:8px; }
-  button { font:inherit; padding:10px 20px; border-radius:8px; border:1px solid var(--accent); background:var(--accent); color:var(--accent-fg); cursor:pointer; margin-top:16px; }
-  button.secondary { background:transparent; color:var(--accent); }
-  button:disabled { opacity:.4; cursor:not-allowed; }
+  /* Task layout only. Text, headings, cards, buttons, fields, notices and colours come from
+     assets/theme.css and assets/tokens.css (built from assets/tokens.json). */
+  main { padding-top:28px; padding-bottom:48px; }
+  @media (max-width:480px) { main { padding-top:18px; } }
+  /* Focus mode: during the lists, lead-ins and rests only the task is on screen (no header or footer). */
+  body.focus .site-header, body.focus .site-footer { display:none; }
+  body.focus main { padding-top:32px; }
+  .site-header .progress { flex:1 1 200px; max-width:260px; }
+  @media (max-width:520px) { .site-header .progress { max-width:none; } }
+  .card h2 + label, .card h2 + fieldset.choice { margin-top:0; }
+  .q-text { margin:0 0 var(--space-2); font-weight:600; }
   .stage { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:280px; text-align:center; }
   .big { font-size:5rem; font-weight:700; letter-spacing:.02em; line-height:1.1; }
   .fix { font-size:4rem; color:var(--muted); line-height:1; }
   .cue { font-size:1.6rem; font-weight:600; }
   .scale { display:flex; gap:8px; margin:6px 0 4px; }
-  .scale button { margin:0; flex:1; background:transparent; color:var(--fg); border-color:var(--line); padding:8px 2px; display:flex; flex-direction:column; align-items:center; gap:2px; line-height:1.2; }
-  .scale button span { font-size:.72rem; color:var(--muted); }
+  .scale button { margin:0; flex:1; background:transparent; color:var(--fg); border-color:var(--line-strong); padding:8px 2px; display:flex; flex-direction:column; align-items:center; gap:2px; line-height:1.2; }
+  .scale button span { font-size:.72rem; color:var(--muted); font-weight:var(--weight-regular); }
   .scale button.on span { color:var(--accent-fg); }
   .scale button.on { background:var(--accent); color:var(--accent-fg); border-color:var(--accent); }
-  .ends { display:flex; justify-content:space-between; font-size:.85rem; color:var(--muted); }
-  .bar { height:6px; background:var(--line); border-radius:3px; margin-bottom:24px; }
-  .bar > div { height:100%; background:var(--accent); border-radius:3px; transition:width .3s; }
-  .warn { background:#fff4d6; color:#5a4300; border:1px solid #e6cf85; border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:.9rem; }
-  table { width:100%; border-collapse:collapse; font-size:.9rem; margin:12px 0; }
-  th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); }
+  .progress-meta { display:flex; justify-content:space-between; gap:12px; margin-bottom:6px; font-size:.85rem; color:var(--muted); }
+  .progress-meta #progLabel { color:var(--fg); font-weight:600; }
+  .bar > div { transition:width var(--duration-slow) var(--ease-standard); }
   .slots { display:flex; gap:min(8px, 1.5vw); justify-content:center; margin:12px 0; }
-  .slots span { width:min(2.2rem, 8.5vw); height:3rem; border-bottom:3px solid var(--line); font-size:min(2rem, 7vw); font-weight:700; display:flex; align-items:flex-end; justify-content:center; }
+  .slots span { width:min(2.2rem, 8.5vw); height:3rem; border-bottom:3px solid var(--line-strong); font-size:min(2rem, 7vw); font-weight:700; display:flex; align-items:flex-end; justify-content:center; }
+  .slots span.cur { border-color:var(--accent); }
   .pad { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; width:100%; max-width:320px; margin:4px auto 0; }
-  .pad button { margin:0; padding:14px 0; font-size:1.5rem; font-weight:700; background:transparent; color:var(--fg); border-color:var(--line); touch-action:manipulation; user-select:none; }
+  .pad button { margin:0; padding:14px 0; font-size:1.5rem; font-weight:700; background:var(--card); color:var(--fg); border-color:var(--line-strong); touch-action:manipulation; user-select:none; }
   .pad button { -webkit-tap-highlight-color:transparent; outline:none; }
-  .pad button:active { background:var(--line); }
+  .pad button:active { background:var(--accent-soft); }
   .pad button.done { background:var(--accent); color:var(--accent-fg); border-color:var(--accent); font-size:1.1rem; }
   .pad button.done:disabled { opacity:.35; }
-  .slots span.cur { border-color:var(--accent); }
+  @media (hover:hover) { .scale button:not(.on):hover, .pad button:not(.done):not(:disabled):hover { background:var(--accent-soft); } }
   .seq { font-size:1.6rem; font-weight:700; letter-spacing:.3em; }
-  .ok { color:var(--ok); } .bad { color:var(--bad); }
+  .opt { font-weight:400; color:var(--muted); font-size:.9rem; }
+  .theme-opts { display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin:0; }
+  .theme-opts label { margin:0; position:relative; font-weight:400; }
+  .theme-opts input { position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer; }
+  .opt-card { display:flex; flex-direction:column; align-items:center; gap:6px; height:100%; padding:12px 8px; border:1px solid var(--line-strong); border-radius:var(--radius-md); background:var(--card); text-align:center; }
+  .opt-card b { font-weight:600; }
+  .opt-card small { color:var(--muted); font-size:.78rem; line-height:1.3; }
+  .theme-opts input:checked + .opt-card { border-color:var(--accent); box-shadow:inset 0 0 0 2px var(--accent); }
+  .theme-opts input:focus-visible + .opt-card { outline:2px solid var(--accent); outline-offset:2px; }
+  /* Swatches: the .theme-light / .theme-dark class gives each one that palette, whatever the page is showing. */
+  .sw { width:34px; height:34px; flex:none; display:flex; overflow:hidden; border-radius:50%; border:1px solid var(--line-strong); background:linear-gradient(135deg, var(--bg) 55%, var(--accent) 55%); }
+  .sw-system { background:none; }
+  .sw-system span { flex:1; background:var(--bg); }
+  .preview { display:grid; grid-template-columns:auto 1fr; gap:12px 16px; align-items:center; padding:14px; border:1px solid var(--line); border-radius:var(--radius-md); background:var(--bg); }
+  .preview-digit { font-size:3rem; font-weight:700; width:64px; text-align:center; line-height:1; }
+  .preview-keys { display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; max-width:220px; }
+  .preview-keys span, .preview-scale span { padding:4px 0; text-align:center; font-weight:700; border:1px solid var(--line-strong); border-radius:var(--radius-sm); background:var(--card); }
+  .preview-keys span.done, .preview-scale span.on { background:var(--accent); color:var(--accent-fg); border-color:var(--accent); }
+  .preview-keys span.done { grid-column:span 3; font-weight:600; }
+  .preview-scale { grid-column:1 / -1; display:flex; gap:6px; }
+  .preview-scale span { flex:1; }
+  .preview-note { grid-column:1 / -1; margin:0; }
+  @media (max-width:420px) {
+    .theme-opts { grid-template-columns:1fr; }
+    .opt-card { flex-direction:row; text-align:left; gap:12px; }
+  }
 </style>
 </head>
 <body>
+<header class="site-header">
+  <div class="site-header-inner">
+    <span class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 17.5V6.6l10-2.1v10.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 6.6l10-2.1v3.4L9 10z" fill="currentColor"/><circle cx="6.6" cy="17.5" r="2.6" fill="currentColor"/><circle cx="16.6" cy="15.1" r="2.6" fill="currentColor"/></svg></span>Music and Memory</span>
+    <div class="progress" id="progress" hidden>
+      <div class="progress-meta"><span id="progLabel"></span><span id="progPct"></span></div>
+      <div class="bar" role="progressbar" aria-labelledby="progLabel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="prog" style="width:0%"></div></div>
+    </div>
+  </div>
+</header>
 <main>
-  <div class="bar"><div id="prog" style="width:0%"></div></div>
   <div id="warn"></div>
   <div id="app"></div>
 </main>
+<footer class="site-footer" id="footer"></footer>
 
 <script>
 "use strict";
@@ -67,6 +97,15 @@ const DATAPIPE_ID = "hmU1FxSIMrPB";         // DataPipe experiment; files land i
 const LEAD_IN_S = FAST ? 3 : 30;
 const REST_S = FAST ? 2 : 20;
 const RECALL_LEN = 9, RECALL_LISTS = 8;     // serial recall: 8 lists of 9 digits per block (all of 1-9, random order)
+// Shown on the information and consent pages. Fill these in before running the study; empty ones are left out
+// (without a contact, participants are told to ask their course instructor).
+const STUDY = {
+  team: "",      // who runs the study, e.g. "the Music Course team, Department of …"
+  contact: "",   // email for questions and for removing answers later, e.g. "music.study@university.edu"
+  ethics: ""     // approval, e.g. "Approved by the … Ethics Committee, reference …"
+};
+document.getElementById("footer").innerHTML = "Questions about this study? " + (STUDY.contact
+  ? `Email <a href="mailto:${STUDY.contact}">${STUDY.contact}</a>.` : "Ask your course instructor.");
 
 const CONDITIONS = {
   A: { label: "Indian style, slow",  style: "raga",    tempo: "slow", file: "stimuli/A_raga_slow.mp3" },
@@ -134,11 +173,11 @@ function resumePrompt(st) {
   return new Promise(res => {
     const what = st.finished ? "You finished all five blocks, but your answers were not saved yet."
       : st.nextBlock > 0 ? `You completed ${st.nextBlock} of 5 blocks.` : "You started but did not finish the practice or the first block.";
-    show(`<div class="card"><h1>Welcome back</h1>
-      <p>This computer has an unfinished session (ID <b>${String(st.P.id).replace(/[<>&]/g, "")}</b>, started ${new Date(st.savedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}). ${what}</p>
-      <p class="muted">${st.finished ? "" : "Continuing restarts the block you were in, from its beginning."}</p>
-      <button id="cont">${st.finished ? "Save my answers" : "Continue my session"}</button>
-      <button id="fresh" class="secondary">Start over</button></div>`);
+    show(`${pageHead("Welcome back", "This device has an unfinished session.")}
+      ${card(`<p>Session ${st.P.name ? `of <b>${esc(st.P.name)}</b>, ` : ""}ID <b>${esc(st.P.id)}</b>, started ${new Date(st.savedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}. ${what}</p>
+        ${st.finished ? "" : `<p class="muted">Continuing restarts the block you were in, from its beginning.</p>`}`)}
+      ${actions(`<button id="cont">${st.finished ? "Save my answers" : "Continue my session"}</button>
+        <button id="fresh" class="secondary">Start over</button>`)}`, "resume", st);
     document.getElementById("cont").onclick = () => { unlockAudio(); keepAwake(); res(true); };
     document.getElementById("fresh").onclick = () => res(false);
   });
@@ -148,12 +187,50 @@ function resumePrompt(st) {
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const nextFrame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r())));
 function warn(msg) { document.getElementById("warn").innerHTML = msg ? `<div class="warn">${msg}</div>` : ""; }
-function setProg(f) { document.getElementById("prog").style.width = Math.round(f * 100) + "%"; }
-function show(html) { app.innerHTML = html; }
-function screen(html, btn = "Continue") {
+/* Progress bar: shown only on the first page of each phase, with how much of the whole session is done.
+   The five blocks are most of the time, so they take 15-100%. Every other page hides the bar. */
+const BLOCK_START = 0.15, BLOCK_SPAN = (1 - BLOCK_START) / 5;
+const PHASES = {
+  intro:    () => [0, "Intro"],
+  setup:    () => [0.04, "Setup"],
+  testing:  () => [0.07, "Practice"],
+  pre:      () => [0.12, "Questions before the task"],
+  about:    b => b == null ? [0.14, "About the task"] : [BLOCK_START + b * BLOCK_SPAN, `Block ${b + 1} of 5`],
+  continue: b => [BLOCK_START + b * BLOCK_SPAN, "About the task"],
+  post:     b => [BLOCK_START + (b + 0.85) * BLOCK_SPAN, `Questions after block ${b + 1}`],
+  resume:   st => [savedProgress(st), "Welcome back"],
+  done:     () => [1, "Finished"]
+};
+let progFloor = 0;                           // a resumed session never shows less than it had reached
+function savedProgress(st) {
+  return st.finished ? 1 : st.nextBlock > 0 ? BLOCK_START + st.nextBlock * BLOCK_SPAN
+    : st.baselineDone ? PHASES.pre()[0] : st.practiceDone ? PHASES.testing()[0] : PHASES.setup()[0];
+}
+function setBar(phase, arg) {
+  const box = document.getElementById("progress");
+  if (!phase) { box.hidden = true; return; }
+  const [f, label] = PHASES[phase](arg);
+  const pct = Math.round(Math.max(f, progFloor) * 100);
+  document.getElementById("progLabel").textContent = label;
+  document.getElementById("progPct").textContent = `${pct}% done`;
+  document.getElementById("prog").style.width = pct + "%";
+  box.querySelector(".bar").setAttribute("aria-valuenow", pct);
+  box.hidden = false;
+}
+function show(html, phase = null, arg = null) {
+  app.innerHTML = html; setBar(phase, arg);
+  document.body.classList.toggle("focus", html.startsWith('<div class="stage"'));   // task screens: no header or footer
+  window.scrollTo(0, 0);                                                            // each page opens at its top
+}
+/* Information pages: a heading (title and a short introduction), then cards, then the buttons. */
+const pageHead = (title, lead = "", eyebrow = "", before = "") =>
+  `<header class="page-head">${before}${eyebrow ? `<p class="eyebrow">${eyebrow}</p>` : ""}<h1>${title}</h1>${lead ? `<p class="lead">${lead}</p>` : ""}</header>`;
+const card = (body, title = "") => `<section class="card">${title ? `<h2>${title}</h2>` : ""}${body}</section>`;
+const actions = buttons => `<div class="actions">${buttons}</div>`;
+function screen(head, body, btn = "Continue", phase = null, arg = null) {
   return new Promise(res => {
-    show(`<div class="card">${html}<button id="go">${btn}</button></div>`);
-    const go = document.getElementById("go"); go.focus();
+    show(`${head}${body}${actions(`<button id="go">${btn}</button>`)}`, phase, arg);
+    const go = document.getElementById("go"); go.focus({ preventScroll: true });
     go.onclick = () => { go.disabled = true; res(); };
   });
 }
@@ -163,11 +240,16 @@ function mulberry32(a) {
 }
 function hash(s) { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
 function shuffle(a, rng) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const ROLL_LEN = 10;                                          // roll numbers are exactly 10 digits
+const validRoll = v => new RegExp(`^\\d{${ROLL_LEN}}$`).test(v);
+const cleanName = v => v.trim().replace(/\s+/g, " ");
+const validName = v => /^[\p{L}\p{M}][\p{L}\p{M} .'-]*$/u.test(v) && (v.match(/\p{L}/gu) || []).length >= 2;
 function mean(a) { return a.length ? a.reduce((x, y) => x + y, 0) / a.length : NaN; }
 function fmt(x, d = 0) { return Number.isFinite(x) ? x.toFixed(d) : "–"; }
 
 function log(r) {
-  rows.push({ participant: P.id, session_id: P.session, device: P.device, test_run: FAST ? 1 : 0, order_row: P.row + 1, order: P.order.join(""), order_source: P.orderSource, resumes: P.resumes, fam_carnatic: P.famC, fam_hindustani: P.famH, training_years: P.training,
+  rows.push({ participant: P.id, session_id: P.session, consent_time: P.consentAt || "", music_course: P.musicCourse, full_name: P.name, device: P.device, theme: Theme.get(), theme_resolved: Theme.resolved(), test_run: FAST ? 1 : 0, order_row: P.row + 1, order: P.order.join(""), order_source: P.orderSource, resumes: P.resumes, fam_carnatic: P.famC, fam_hindustani: P.famH, training_years: P.training,
               audio_ok: audioOK, timestamp: new Date().toISOString(), ...r });
 }
 
@@ -211,35 +293,143 @@ async function assignOrder() {             // next order in rotation from DataPi
   return Math.floor(Math.random() * ORDERS.length);
 }
 let orderSource = "url";
+
+/* ---------- information and consent: six short pages, one screen each; nothing is saved or sent before agreeing ---------- */
+let consentAt = "";
+function infoPages() {
+  const contact = STUDY.contact ? `Email <a href="mailto:${esc(STUDY.contact)}">${esc(STUDY.contact)}</a>.` : "Ask your course instructor.";
+  return [
+    { title: "Welcome", lead: "Thank you for your interest in this study.",
+      body: card(`<p>This study looks at whether background music changes how well people remember short lists of numbers.</p>
+        ${STUDY.team ? `<p>It is run by ${esc(STUDY.team)}.</p>` : ""}
+        <ul class="checklist"><li>About 18 minutes</li><li>On a phone, tablet or computer</li><li>With headphones</li></ul>`) },
+    { title: "What you'll do", lead: "Five parts, one after the other.",
+      body: card(`<ol class="steps">
+        <li><b>About you</b><span>A few questions about you.</span></li>
+        <li><b>Setup</b><span>Choose a theme and set your volume.</span></li>
+        <li><b>Practice</b><span>Two short lists without music, then two quick questions.</span></li>
+        <li><b>Five blocks, about 3 minutes each</b><span>Different music or silence each time: listen 30 seconds, remember ${RECALL_LISTS} lists of ${RECALL_LEN} digits, rate how you feel.</span></li>
+        <li><b>Your results</b><span>See how you did.</span></li></ol>`) },
+    { title: "Before you start", lead: "These make your answers count.",
+      body: card(`<ul class="checklist">
+        <li>Wear headphones and sit somewhere quiet.</li>
+        <li>Keep this page in front until the end. Leaving it during a block is recorded.</li>
+        <li>Set your volume once, at the start, and leave it.</li>
+        <li>If the page closes, open the same link on this device within 6 hours to continue.</li></ul>`) },
+    { title: "Your data", lead: "What we record, and where it goes.",
+      body: card(`<dl class="facts">
+        <dt>What we record</dt><dd>Your answers, times and ratings; your music background and course; your name and roll number if given; your device, theme, and how often you leave the page during a block.</dd>
+        <dt>What we don't</dt><dd>No microphone, camera or location.</dd>
+        <dt>Where it goes</dt><dd>Sent securely to DataPipe, a research data service, which saves it to the study's Google Drive folder. Until then, it stays in this browser.</dd></dl>`) },
+    { title: "Your choices", lead: "Taking part is up to you.",
+      body: card(`<dl class="facts">
+        <dt>Voluntary</dt><dd>Stop at any time by closing the page; no reason needed. Finished blocks are saved as you go.</dd>
+        <dt>Your name and roll number</dt><dd>Used only for course participation and to link your sessions; removed before the data are analysed or shared.</dd>
+        <dt>Questions, or removing your answers</dt><dd>${contact} With a roll number, your answers can be removed later; without one, they cannot be traced to you, so they cannot be removed.</dd></dl>
+        ${STUDY.ethics ? `<p class="muted">${esc(STUDY.ethics)}</p>` : ""}`) },
+    { title: "Consent", lead: "To take part, please confirm each statement.", consent: true,
+      body: card(`<fieldset class="choice" id="consent"><legend class="visually-hidden">Consent statements</legend><div class="checks">
+        <label class="check"><input type="checkbox" name="consent"><span>I have read and understood the information.</span></label>
+        <label class="check"><input type="checkbox" name="consent"><span>I know taking part is voluntary and I can stop at any time.</span></label>
+        <label class="check"><input type="checkbox" name="consent"><span>I agree to take part, and to my answers being used for research without my name or roll number.</span></label>
+        </div></fieldset>`) }
+  ];
+}
+async function consentPage() {
+  const pages = infoPages(), $ = id => document.getElementById(id);
+  for (let i = 0; ;) {
+    const pg = pages[i];
+    const nav = `<div class="page-nav">${i > 0 ? `<button type="button" class="back-link" id="infoBack">← Back</button>` : ""}<span class="step-count">Step ${i + 1} of ${pages.length}</span></div>`;
+    show(`${pageHead(pg.title, pg.lead, "", nav)}${pg.body}
+      ${actions(pg.consent ? `<button id="agree" disabled>I agree, continue</button><button id="decline" class="secondary">I don't want to take part</button>`
+                           : `<button id="infoNext">Next</button>`)}`, i === 0 ? "intro" : null);
+    if (pg.consent) {
+      const boxes = [...document.querySelectorAll('input[name="consent"]')];
+      boxes.forEach(b => b.onchange = () => { $("agree").disabled = !boxes.every(x => x.checked); });
+    } else $("infoNext").focus({ preventScroll: true });
+    const go = await new Promise(res => {
+      if ($("infoBack")) $("infoBack").onclick = () => res("back");
+      if (pg.consent) { $("agree").onclick = () => res("agree"); $("decline").onclick = () => res("decline"); }
+      else $("infoNext").onclick = () => res("next");
+    });
+    if (go === "next") i++;
+    else if (go === "back") i--;
+    else if (go === "agree") { consentAt = new Date().toISOString(); return; }
+    else {
+      show(`${pageHead("Thank you for your time", "You chose not to take part.")}
+        ${card(`<p>None of your answers have been recorded. You can close this page now.</p>
+          <p class="muted">If you change your mind, read the information again and start.</p>`)}
+        ${actions(`<button id="again" class="secondary">Back to the information</button>`)}`);
+      await new Promise(res => $("again").onclick = res);
+      i = 0;
+    }
+  }
+}
+
+/* ---------- about you (second page) ---------- */
 async function setup() {
-  show(`<div class="card">
-    <h1>Music and Memory Task</h1>
-    <p>About 18 minutes. You will do one short memory task five times, with different background music (or silence) each time. Works on a phone or a laptop. Use headphones, sit somewhere quiet, and keep this page open and in front until the end.</p>
-    <p class="muted">Participation is voluntary and confidential. Your roll number is used only to link your sessions (for example if you need to continue later) and is removed before the data are analysed or shared. You can stop at any time by closing the page.</p>
-    <label for="pid">Roll number</label>
-    <input id="pid" type="text" inputmode="numeric" autocomplete="off" maxlength="15" placeholder="e.g. 2023102029">
-    <label for="famC">How familiar are you with Carnatic (South Indian classical) music?</label>
+  show(`${pageHead("About you", "A few questions before you start. They take about a minute.")}
+    ${card(`<fieldset class="choice" id="courseQ">
+      <legend>Are you part of the Music Course?</legend>
+      <div class="seg">
+        <label><input type="radio" name="course" value="yes"><span>Yes</span></label>
+        <label><input type="radio" name="course" value="no"><span>No</span></label>
+      </div>
+    </fieldset>
+    <div id="nameRow" hidden>
+      <label for="pname">Full name</label>
+      <input id="pname" type="text" autocomplete="name" autocapitalize="words" spellcheck="false" maxlength="80" aria-describedby="nameMsg">
+      <p class="field-msg" id="nameMsg" aria-live="polite"></p>
+    </div>
+    <div id="rollRow" hidden>
+      <label for="pid">Roll number <span class="opt" id="rollOpt">(optional)</span></label>
+      <input id="pid" type="text" inputmode="numeric" autocomplete="off" placeholder="10 digits, e.g. 2023102029" aria-describedby="pidMsg">
+      <p class="field-msg" id="pidMsg" aria-live="polite"></p>
+    </div>`, "Course participation")}
+    ${card(`<label for="famC">How familiar are you with Carnatic (South Indian classical) music?</label>
     <select id="famC"><option value="" selected disabled>choose 1–5</option><option value="1">1 – not at all</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5 – very familiar</option></select>
     <label for="famH">How familiar are you with Hindustani (North Indian classical) music?</label>
     <select id="famH"><option value="" selected disabled>choose 1–5</option><option value="1">1 – not at all</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5 – very familiar</option></select>
     <label for="trn">Years of formal music training (0 if none)</label>
-    <input id="trn" type="number" min="0" max="60" value="0">
-    <label><input id="hear" type="checkbox" style="margin-right:8px">I have normal or corrected hearing and I am wearing headphones.</label>
-    <button id="start" disabled>Begin</button>
-  </div>`);
-  const hear = document.getElementById("hear"), start = document.getElementById("start");
-  const pid = document.getElementById("pid");
-  const ready = () => start.disabled = !(hear.checked && document.getElementById("famC").value && document.getElementById("famH").value
-                                        && /^[A-Za-z0-9-]{4,15}$/.test(pid.value.trim()));
-  hear.onchange = ready; document.getElementById("famC").onchange = ready; document.getElementById("famH").onchange = ready; pid.oninput = ready;
+    <input id="trn" type="number" min="0" max="60" value="0">`, "Your music background")}
+    ${card(`<div class="checks"><label class="check"><input id="hear" type="checkbox"><span>I have normal or corrected hearing and I am wearing headphones.</span></label></div>`, "Hearing and headphones")}
+    ${actions(`<button id="start" disabled>Begin</button>`)}`);
+  const $ = id => document.getElementById(id);
+  const hear = $("hear"), start = $("start"), pid = $("pid"), pname = $("pname");
+  const courseVal = () => (document.querySelector('input[name="course"]:checked') || {}).value;
+  const touched = { pid: false, pname: false };
+  const ready = () => {
+    const c = courseVal(), member = c === "yes";
+    $("nameRow").hidden = !member; $("rollRow").hidden = !c;
+    $("rollOpt").textContent = member ? "" : "(optional)";
+    const roll = pid.value, name = cleanName(pname.value);
+    const rollOk = roll === "" ? !member : validRoll(roll), nameOk = !member || validName(name);
+    // roll number: count while typing, error once the field is left (or when it is required and empty)
+    const rollErr = !rollOk && touched.pid;
+    $("pidMsg").textContent = rollErr ? (roll === "" ? `Enter your ${ROLL_LEN}-digit roll number.` : `Roll number must be exactly ${ROLL_LEN} digits.`)
+      : roll && roll.length < ROLL_LEN ? `${roll.length} of ${ROLL_LEN} digits` : "";
+    $("pidMsg").classList.toggle("err", rollErr);
+    const nameErr = !nameOk && touched.pname;
+    $("nameMsg").textContent = nameErr ? "Enter your full name (letters only)." : "";
+    $("nameMsg").classList.toggle("err", nameErr);
+    start.disabled = !(c && rollOk && nameOk && hear.checked && $("famC").value && $("famH").value);
+  };
+  pid.oninput = () => { pid.value = pid.value.replace(/\D/g, "").slice(0, ROLL_LEN); if (pid.value.length === ROLL_LEN) touched.pid = true; ready(); };
+  pid.onblur = () => { touched.pid = pid.value !== "" || courseVal() === "yes"; ready(); };
+  pname.oninput = ready; pname.onblur = () => { touched.pname = true; ready(); };
+  document.querySelectorAll('input[name="course"]').forEach(r => r.onchange = () => { touched.pid = touched.pid && pid.value !== ""; ready(); });
+  hear.onchange = ready; $("famC").onchange = ready; $("famH").onchange = ready;
   await new Promise(res => start.onclick = () => { unlockAudio(); res(); });
-  const id = pid.value.trim();
-  P = { id, famC: +document.getElementById("famC").value, famH: +document.getElementById("famH").value,
-        training: Math.max(0, +document.getElementById("trn").value || 0),
+  const member = courseVal() === "yes";
+  const session = Math.random().toString(36).slice(2, 10);   // unique even if two students type the same ID
+  const id = pid.value || `anon-${session}`;                  // no roll number: a unique anonymous ID
+  P = { id, consentAt, musicCourse: member ? 1 : 0, name: member ? cleanName(pname.value) : "",
+        famC: +$("famC").value, famH: +$("famH").value,
+        training: Math.max(0, +$("trn").value || 0),
         row: Q.has("row") ? (+Q.get("row") - 1) % ORDERS.length : await assignOrder() };
   P.order = ORDERS[P.row].split("");
   P.orderSource = orderSource; P.resumes = 0;
-  P.session = Math.random().toString(36).slice(2, 10);       // unique even if two students type the same ID
+  P.session = session;
   P.seed = hash(id + P.session);
   P.device = matchMedia("(pointer: coarse)").matches ? "touch" : "computer";
   keepAwake();
@@ -247,13 +437,37 @@ async function setup() {
   for (const a of Object.values(players)) a.load();          // start downloading every track now
 }
 
+/* ---------- setup: theme (System until the participant picks Light or Dark) ---------- */
+Theme.onChange(() => { const el = document.getElementById("sysNow"); if (el) el.textContent = Theme.resolved("system"); });
+async function themePage() {
+  const opt = (v, name, desc) => `<label><input type="radio" name="theme" value="${v}"${Theme.get() === v ? " checked" : ""}>
+    <span class="opt-card"><span class="sw sw-${v}${v === "system" ? "" : " theme-" + v}">${v === "system" ? `<span class="theme-light"></span><span class="theme-dark"></span>` : ""}</span><span><b>${name}</b><br><small>${desc}</small></span></span></label>`;
+  show(`${pageHead("Choose a theme", "Pick how the task looks. It changes straight away, so try each one and check the preview. <b>System</b> follows your device's setting.")}
+    ${card(`<div class="theme-opts" role="radiogroup" aria-label="Theme">
+      ${opt("system", "System", `Follows this device (now <span id="sysNow">${Theme.resolved("system")}</span>)`)}
+      ${opt("light", "Light", "Dark text on a light background")}
+      ${opt("dark", "Dark", "Light text on a dark background")}
+    </div>`)}
+    ${card(`<div class="preview" role="img" aria-label="Preview of the task screens in this theme">
+      <div class="preview-digit">7</div>
+      <div class="preview-keys"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span class="done">Done</span></div>
+      <div class="preview-scale"><span>1</span><span>2</span><span>3</span><span class="on">4</span><span>5</span></div>
+      <p class="muted preview-note">Numbers, the keypad and the rating buttons will look like this.</p>
+    </div>`, "Preview")}
+    ${actions(`<button id="go">Continue</button>`)}`, "setup");
+  document.querySelectorAll('input[name="theme"]').forEach(r => r.onchange = () => Theme.set(r.value));
+  const go = document.getElementById("go"); go.focus({ preventScroll: true });
+  await new Promise(res => go.onclick = () => { go.disabled = true; res(); });
+}
+
 async function volumeCheck() {
-  show(`<div class="card"><h2>Set your volume</h2><p id="vtxt">Loading a music sample…</p>
-    <button id="ok" disabled>Volume is comfortable</button></div>`);
+  show(`${pageHead("Set your volume", "Put your headphones on now. You set the volume once, here, for the whole task.")}
+    ${card(`<p id="vtxt">Loading a music sample…</p>`)}
+    ${actions(`<button id="ok" disabled>Volume is comfortable</button>`)}`);
   await waitAudio("A");
   document.getElementById("vtxt").textContent = "A sample is playing. Adjust your volume until it is comfortable, then leave it there for the whole task.";
   startMusic("A");
-  const ok = document.getElementById("ok"); ok.disabled = false; ok.focus();
+  const ok = document.getElementById("ok"); ok.disabled = false; ok.focus({ preventScroll: true });
   await new Promise(res => ok.onclick = res);
   stopMusic();
 }
@@ -336,16 +550,16 @@ const SCALES = {
   mood:      ["During this block, how was your mood?",       ["Very bad", "Bad", "Neutral", "Good", "Very good"]],
   indian:    ["How Indian did the music sound?",             ["Not at all", "Slightly", "Moderately", "Quite", "Very Indian"]]
 };
-function ratings(cond, baseline = false) {
+function ratings(cond, baseline = false, pos = null) {
   return new Promise(res => {
     const keys = baseline ? ["alertness", "mood"] : ["alertness", "mood"].concat(CONDITIONS[cond].file ? ["indian"] : []);
     const q = k => baseline ? SCALES[k][0].replace("During this block, how", "Right now, how").replace("did you feel", "do you feel").replace("was your mood", "is your mood") : SCALES[k][0];
     const vals = {};
-    show(`<div class="card"><h2>${baseline ? "Before you start" : "Quick ratings"}</h2>
-      ${baseline ? `<p class="muted">Two quick questions about how you feel right now.</p>` : `<p class="muted">The first two are about <b>you</b> during the block${keys.includes("indian") ? "; the last is about <b>the music</b>" : ""}.</p>`}
-      ${keys.map(k => `<label>${q(k)}</label><div class="scale" data-k="${k}">${SCALES[k][1].map((t, i) =>
-        `<button data-v="${i + 1}"><b>${i + 1}</b><span>${t}</span></button>`).join("")}</div>`).join("")}
-      <button id="next" disabled>Continue</button></div>`);
+    show(`${pageHead(baseline ? "Before you start" : "Quick ratings", baseline ? "Two quick questions about how you feel right now."
+        : `The first two are about <b>you</b> during the block${keys.includes("indian") ? "; the last is about <b>the music</b>" : ""}.`)}
+      ${keys.map(k => card(`<p class="q-text" id="q-${k}">${q(k)}</p><div class="scale" role="group" aria-labelledby="q-${k}" data-k="${k}">${SCALES[k][1].map((t, i) =>
+        `<button data-v="${i + 1}"><b>${i + 1}</b><span>${t}</span></button>`).join("")}</div>`)).join("")}
+      ${actions(`<button id="next" disabled>Continue</button>`)}`, baseline ? "pre" : "post", pos);
     const next = document.getElementById("next");
     document.querySelectorAll(".scale").forEach(sc => sc.querySelectorAll("button").forEach(b => b.onclick = () => {
       sc.querySelectorAll("button").forEach(x => x.classList.remove("on")); b.classList.add("on");
@@ -383,16 +597,15 @@ async function runBlock(pos, key) {
   const c = CONDITIONS[key];
   const rng = mulberry32(P.seed + pos * 7919);
   const ctx = { block_position: pos + 1, condition: key, style: c.style, tempo: c.tempo };
-  setProg(pos / 5);
-  show(`<div class="card"><h2>Block ${pos + 1} of 5</h2>
-    <p>${c.file ? "Music will start. For the first 30 seconds, just listen. Then the number lists begin <b>while the music keeps playing</b>." : "This block is <b>quiet</b>. For the first 30 seconds, just sit still. Then the number lists begin."}</p>
-    <p class="muted">Keep your eyes on the screen and don't change the volume.</p>
-    <p class="muted" id="load"></p>
-    <button id="go" disabled>Start block</button></div>`);
+  show(`${pageHead(`Block ${pos + 1} of 5`, c.file ? "With music." : "A quiet block, without music.")}
+    ${card(`<p>${c.file ? "Music will start. For the first 30 seconds, just listen. Then the number lists begin <b>while the music keeps playing</b>." : "This block is <b>quiet</b>. For the first 30 seconds, just sit still. Then the number lists begin."}</p>
+      <p class="muted">Keep your eyes on the screen and don't change the volume.</p>
+      <p class="muted" id="load"></p>`)}
+    ${actions(`<button id="go" disabled>Start block</button>`)}`, "about", pos);
   if (c.file && players[key].readyState < 4) document.getElementById("load").textContent = "Loading music…";
   const ok = await waitAudio(key);
   document.getElementById("load").textContent = ok ? "" : "The music is taking long to load; it will start as soon as it can.";
-  const go = document.getElementById("go"); go.disabled = false; go.focus();
+  const go = document.getElementById("go"); go.disabled = false; go.focus({ preventScroll: true });
   await new Promise(res => go.onclick = () => { go.disabled = true; res(); });
   hiddenCount = 0; inBlock = true; warn("");
   startMusic(key);
@@ -403,13 +616,13 @@ async function runBlock(pos, key) {
   await cue(`<div class="cue">Numbers</div><p class="muted">Remember the order. Type them back in the same order.</p>`);
   const rc = await runRecall(rng, ctx);
   stopMusic(); inBlock = false; warn("");
-  const rat = await ratings(key);
+  const rat = await ratings(key, false, pos);
   for (const [k, v] of Object.entries(rat)) log({ ...ctx, task: "rating", stimulus: k, response: v });
   blockSummaries.push({
-    participant: P.id, session_id: P.session, test_run: FAST ? 1 : 0, block_position: pos + 1, condition: key, label: c.label, style: c.style, tempo: c.tempo,
+    participant: P.id, session_id: P.session, music_course: P.musicCourse, full_name: P.name, test_run: FAST ? 1 : 0, block_position: pos + 1, condition: key, label: c.label, style: c.style, tempo: c.tempo,
     order: P.order.join(""), recall_prop_correct: rc.prop, recall_lists_perfect: rc.perfect,
     alertness: rat.alertness, mood: rat.mood, indian: rat.indian ?? "",
-    tab_hidden_count: hiddenCount, audio_ok: audioOK, resumes: P.resumes
+    tab_hidden_count: hiddenCount, audio_ok: audioOK, resumes: P.resumes, theme: Theme.get()
   });
   if (pos < 4) await rest(REST_S);
 }
@@ -452,19 +665,17 @@ function uploadProgress(blocksDone) {         // cumulative trials so far; fire-
 }
 
 async function finish() {
-  setProg(1);
   const sorted = [...blockSummaries].sort((a, b) => a.condition.localeCompare(b.condition));
   const base = fileBase();
   const files = [[`${base}_trials.csv`, toCSV(rows)], [`${base}_blocks.csv`, toCSV(blockSummaries)]];
-  show(`<div class="card"><h1>Done, thank you</h1>
-    <p id="saveStatus"><b>Saving your responses…</b> Please keep this tab open.</p>
-    <div id="saveActions"></div>
-    <h2 style="margin-top:24px">Your results</h2>
-    <table><tr><th>Condition</th><th>Numbers recalled</th><th>Alert</th><th>Mood</th><th>Indian</th></tr>
-    ${sorted.map(b => `<tr><td>${b.label}</td><td>${fmt(b.recall_prop_correct * 100)}%</td><td>${b.alertness}</td><td>${b.mood}</td><td>${b.indian || "–"}</td></tr>`).join("")}</table>
-    <p class="muted">One person's numbers are noisy and do not show an effect on their own. The class data are what count.</p></div>`);
-  const status = document.getElementById("saveStatus"), actions = document.getElementById("saveActions");
-  const downloads = `<button id="d1" class="secondary">Download trial data</button> <button id="d2" class="secondary">Download block summary</button>`;
+  show(`${pageHead("Done, thank you", "Thank you for taking part.")}
+    ${card(`<p id="saveStatus"><b>Saving your responses…</b> Please keep this tab open.</p>
+      <div id="saveActions"></div>`, "Your answers")}
+    ${card(`<table><tr><th>Condition</th><th>Numbers recalled</th><th>Alert</th><th>Mood</th><th>Indian</th></tr>
+      ${sorted.map(b => `<tr><td>${b.label}</td><td>${fmt(b.recall_prop_correct * 100)}%</td><td>${b.alertness}</td><td>${b.mood}</td><td>${b.indian || "–"}</td></tr>`).join("")}</table>
+      <p class="muted">One person's numbers are noisy and do not show an effect on their own. The class data are what count.</p>`, "Your results")}`, "done");
+  const status = document.getElementById("saveStatus"), box = document.getElementById("saveActions");
+  const downloads = `<button id="d1" class="secondary">Download trial data</button><button id="d2" class="secondary">Download block summary</button>`;
   const wireDownloads = () => {
     document.getElementById("d1").onclick = () => download(files[0][0], files[0][1]);
     document.getElementById("d2").onclick = () => download(files[1][0], files[1][1]);
@@ -472,11 +683,11 @@ async function finish() {
   if (!SAVE) {
     window.removeEventListener("beforeunload", leaveGuard); clearState();
     status.innerHTML = "<b>Test mode:</b> nothing was uploaded.";
-    actions.innerHTML = downloads; wireDownloads(); return;
+    box.innerHTML = actions(downloads); wireDownloads(); return;
   }
   const pending = files.map(() => true);
   const attempt = async () => {
-    status.innerHTML = "<b>Saving your responses…</b> Please keep this tab open."; actions.innerHTML = "";
+    status.innerHTML = "<b>Saving your responses…</b> Please keep this tab open."; box.innerHTML = "";
     let err = "";
     for (let i = 0; i < files.length; i++) {
       if (!pending[i]) continue;
@@ -486,10 +697,10 @@ async function finish() {
     if (!pending.some(Boolean)) {
       window.removeEventListener("beforeunload", leaveGuard); clearState();
       status.innerHTML = "<b>Your responses are saved.</b> You can close this tab.";
-      actions.innerHTML = `<p class="muted">Optional: keep a copy.</p>` + downloads; wireDownloads();
+      box.innerHTML = `<p class="muted">Optional: keep a copy.</p>` + actions(downloads); wireDownloads();
     } else {
       status.innerHTML = `<b>Your responses could not be saved</b> (${err}). Try again; if it still fails, download both files and send them to your instructor.`;
-      actions.innerHTML = `<button id="retry">Try again</button> ` + downloads; wireDownloads();
+      box.innerHTML = actions(`<button id="retry">Try again</button>` + downloads); wireDownloads();
       document.getElementById("retry").onclick = attempt;
     }
   };
@@ -512,27 +723,41 @@ async function runBaseline() {               // one "right now" alertness/mood r
     Object.assign(S, { nextBlock: saved.nextBlock, practiceDone: saved.practiceDone, baselineDone: !!saved.baselineDone, finished: saved.finished });
     window.addEventListener("beforeunload", leaveGuard);
     for (const a of Object.values(players)) a.load();
-    setProg(S.nextBlock / 5);
+    progFloor = savedProgress(S);
     if (S.finished) { await finish(); return; }
   } else {
     clearState();
+    await consentPage();
     await setup();
   }
   saveState();
+  await themePage();
   await volumeCheck();
   if (!S.practiceDone) {
-    await screen(`<h2>The task: number lists</h2>
-      <p>${RECALL_LEN} digits appear one at a time. Then type them back <b>in the same order</b>.</p>
-      <p>Each list uses all the digits 1–9 once, in a random order. Example: you see 4, 9, 2, … → you enter 4 9 2 …. If you forget one, enter <b>–</b> in its place so the others stay in the right position. Tap the on-screen keys, or type on a keyboard.</p>
-      <p class="muted">There is no time limit for typing; the music simply keeps playing until you finish. It is meant to be hard; most people get about half to two-thirds right. Two practice lists first, without music.</p>`, "Try the practice lists");
+    await screen(pageHead("The task: number lists", `${RECALL_LEN} digits appear one at a time. Then type them back <b>in the same order</b>.`),
+      card(`<p>Each list uses all the digits 1–9 once, in a random order. Example: you see 4, 9, 2, … → you enter 4 9 2 …. If you forget one, enter <b>–</b> in its place so the others stay in the right position. Tap the on-screen keys, or type on a keyboard.</p>`, "How it works") +
+      card(`<ul class="checklist">
+          <li>There is no time limit for typing; the music simply keeps playing until you finish.</li>
+          <li>It is meant to be hard; most people get about half to two-thirds right.</li>
+          <li>Two practice lists first, without music.</li>
+        </ul>`, "Good to know"), "Try the practice lists", "testing");
     await runRecall(mulberry32(1), {}, true, 2);
     S.practiceDone = true; saveState();
     await runBaseline();
-    await screen(`<h2>Ready</h2><p>Five blocks follow, about 3 minutes each, each with different background music or silence. Each block starts with 30 seconds of just listening, then ${RECALL_LISTS} number lists (the screen shows "List 1 of ${RECALL_LISTS}" and so on). No time limit: the music keeps playing until you finish the last list.</p>
-      <p class="muted">Don't change your volume, and keep this tab in front until the end. If the page closes by accident, open the link again on this computer to continue.</p>`, "Start");
+    await screen(pageHead("Ready", "Five blocks follow, about 3 minutes each, each with different background music or silence."),
+      card(`<ol class="steps">
+          <li><b>Listen</b><span>Each block starts with 30 seconds of just listening.</span></li>
+          <li><b>${RECALL_LISTS} number lists</b><span>The screen shows "List 1 of ${RECALL_LISTS}" and so on. No time limit: the music keeps playing until you finish the last list.</span></li>
+          <li><b>Quick ratings</b><span>Then a short rest before the next block.</span></li>
+        </ol>`, "Each block") +
+      card(`<ul class="checklist">
+          <li>Don't change your volume, and keep this tab in front until the end.</li>
+          <li>If the page closes by accident, open the link again on this device to continue.</li>
+        </ul>`, "Remember"), "Start", "about");
   } else {
     await runBaseline();
-    await screen(`<h2>Continuing</h2><p>Next is block ${S.nextBlock + 1} of 5. As before: 30 seconds of listening, then ${RECALL_LISTS} number lists, typed back in the same order.</p>`, "Continue");
+    await screen(pageHead("Continuing", `Next is block ${S.nextBlock + 1} of 5.`),
+      card(`<p>As before: 30 seconds of listening, then ${RECALL_LISTS} number lists, typed back in the same order.</p>`), "Continue", "continue", S.nextBlock);
   }
   for (let i = S.nextBlock; i < 5; i++) {
     await runBlock(i, P.order[i]);

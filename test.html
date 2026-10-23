@@ -3,41 +3,53 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f3f1ec">
 <title>Stimulus Check</title>
+<link rel="stylesheet" href="assets/tokens.css">
+<link rel="stylesheet" href="assets/theme.css">
+<script src="assets/theme.js"></script>
 <style>
-  :root { --bg:#fafaf7; --fg:#1d1d1b; --muted:#6b6b66; --line:#d9d9d2; --accent:#2f5d50; --accent-fg:#fff; --card:#fff; --track:#e7e7e0; }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg:#161715; --fg:#ececE6; --muted:#9a9a92; --line:#33342f; --accent:#7fb8a4; --accent-fg:#102019; --card:#1e1f1c; --track:#2a2b27; }
-  }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
-  main { max-width:720px; margin:0 auto; padding:32px 16px 64px; }
-  h1 { font-size:1.4rem; margin:0 0 .25rem; }
-  .muted { color:var(--muted); font-size:.9rem; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; margin:16px 0; }
-  button { font:inherit; border-radius:8px; border:1px solid var(--accent); background:transparent; color:var(--accent); cursor:pointer; }
-  button:disabled { opacity:.4; cursor:default; }
+  /* Page layout only. Text, headings, cards, the theme switch and colours come from
+     assets/theme.css and assets/tokens.css (built from assets/tokens.json). */
+  :root { --page-width: 720px; }
+  main { padding-top:28px; padding-bottom:48px; }
+  .card + p { margin-top:var(--space-4); }
+  button { background:transparent; color:var(--accent); font-weight:var(--weight-regular); }
   .tracks { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   .tracks button { text-align:left; padding:12px; }
-  .tracks button b { display:block; font-size:1rem; }
+  .tracks button b { display:block; font-size:1rem; font-weight:var(--weight-strong); }
   .tracks button span { font-size:.82rem; color:var(--muted); }
   .tracks button.on { background:var(--accent); color:var(--accent-fg); }
   .tracks button.on span { color:var(--accent-fg); opacity:.85; }
+  @media (hover:hover) { .tracks button:not(.on):not(:disabled):hover, .small:not(:disabled):hover { background:var(--accent-soft); } }
   .transport { display:flex; align-items:center; gap:12px; margin-top:16px; flex-wrap:wrap; }
-  #play { width:96px; padding:10px; background:var(--accent); color:var(--accent-fg); font-weight:600; }
+  #play { width:96px; padding:10px; background:var(--accent); color:var(--accent-fg); font-weight:var(--weight-strong); }
   #time { font-variant-numeric:tabular-nums; min-width:110px; }
-  input[type=range] { accent-color:var(--accent); }
   #seek { width:100%; margin-top:14px; }
+  .transport label { display:inline; margin:0; font-weight:var(--weight-regular); }
   .small { padding:6px 10px; font-size:.85rem; }
-  .bar { height:6px; background:var(--track); border-radius:3px; overflow:hidden; margin:8px 0; }
-  .bar > div { height:100%; width:0; background:var(--accent); transition:width .2s; }
+  .bar { margin:8px 0; }
+  .bar > div { width:0; transition:width .2s; }
   @media (max-width:520px) { .tracks { grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
+<header class="site-header">
+  <div class="site-header-inner">
+    <span class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 17.5V6.6l10-2.1v10.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 6.6l10-2.1v3.4L9 10z" fill="currentColor"/><circle cx="6.6" cy="17.5" r="2.6" fill="currentColor"/><circle cx="16.6" cy="15.1" r="2.6" fill="currentColor"/></svg></span>Music and Memory</span>
+    <div class="theme-switch" role="group" aria-label="Theme">
+      <button type="button" data-theme-choice="system" title="Follow this device's setting">System</button>
+      <button type="button" data-theme-choice="light">Light</button>
+      <button type="button" data-theme-choice="dark">Dark</button>
+    </div>
+  </div>
+</header>
 <main>
-  <h1>Stimulus check</h1>
-  <p class="muted">All four files load fully before playback, so nothing buffers mid-play. Switching tracks keeps the position, so you can compare the same bar in each version (compare slow with slow, fast with fast). Loops are gapless. Use headphones. Raga Shankarabharanam (the Western major scale), same violin in all four.</p>
+  <header class="page-head">
+    <p class="eyebrow">For researchers</p>
+    <h1>Stimulus check</h1>
+    <p class="lead">All four files load fully before playback, so nothing buffers mid-play. Switching tracks keeps the position, so you can compare the same bar in each version (compare slow with slow, fast with fast). Loops are gapless. Use headphones. Raga Shankarabharanam (the Western major scale), same violin in all four.</p>
+  </header>
 
   <div class="card" id="loading">
     <div id="loadText">Loading audio…</div>
@@ -67,6 +79,8 @@ const TRACKS = [
   { file: "stimuli/D_western_fast.mp3", name: "D · Western style, fast", desc: "120 BPM · same as C, double tempo" }
 ];
 const $ = id => document.getElementById(id);
+
+// The theme switch (System / Light / Dark) is wired up by assets/theme.js; the choice carries over to the task page.
 let ctx, master, buffers = [], cur = 0, src = null, srcGain = null, playing = false, t0 = 0, pausedAt = 0;
 
 const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;

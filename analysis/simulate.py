@@ -9,7 +9,8 @@ Effects are in log-odds of recalling a digit in position:
   --tempo      fast minus slow
   --style-fam  extra Indian-style effect per SD of Carnatic familiarity (cultural account)
 Also writes, on purpose: one test run, one unfinished session (progress files only), one
-session with a resume, and one participant who pressed "Start over" (duplicate ID).
+session with a resume, one participant who pressed "Start over" (duplicate ID), and one
+participant outside the Music Course who gave no roll number (anonymous ID "anon-<session>").
 """
 import argparse, os, random
 import numpy as np
@@ -20,8 +21,9 @@ COND = {"A": ("raga", "slow"), "B": ("raga", "fast"), "C": ("western", "slow"), 
 POS_CURVE = np.array([0.9, 0.5, 0.1, -0.2, -0.4, -0.5, -0.5, -0.3, 0.1])   # primacy and a small recency bump (9 positions)
 
 
-def session(pid, sid, row, rng, eff, fam, base, blocks=5, test=0, resume_at=None):
+def session(pid, sid, row, rng, eff, fam, base, blocks=5, test=0, resume_at=None, course=1):
     rows = []
+    who = dict(participant=pid, session_id=sid, music_course=course, full_name=f"Student {pid}" if course else "")
     order = ORDERS[row]
     famz = (fam - 3) / 1.2
     for b in range(blocks):
@@ -36,14 +38,14 @@ def session(pid, sid, row, rng, eff, fam, base, blocks=5, test=0, resume_at=None
             stim = rng.sample(range(1, 10), 9)
             resp = [str(x) if rng.random() < 1 / (1 + np.exp(-(logit + POS_CURVE[i]))) else "-" for i, x in enumerate(stim)]
             hits = sum(r == str(x) for r, x in zip(resp, stim))
-            rows.append(dict(participant=pid, session_id=sid, test_run=test, order_row=row + 1, order=order, order_source="datapipe",
+            rows.append(dict(**who, test_run=test, order_row=row + 1, order=order, order_source="datapipe",
                              resumes=resumes, fam_carnatic=fam, fam_hindustani=2, training_years=0, audio_ok=True,
                              timestamp=f"2026-11-01T10:{b:02d}:{k:02d}Z", block_position=b + 1, condition=cond, style=style,
                              tempo=tempo, task="recall", trial=k + 1, list_length=9, stimulus="".join(map(str, stim)),
                              response="".join(resp), n_correct_positions=hits, correct=int(hits == 9), rt_ms=6000, tab_hidden_so_far=0))
         ratings = [("alertness", 3), ("mood", 3)] + ([("indian", 4 if style == "raga" else 2)] if style != "quiet" else [])
         for name, v in ratings:
-            rows.append(dict(participant=pid, session_id=sid, test_run=test, order_row=row + 1, order=order, order_source="datapipe",
+            rows.append(dict(**who, test_run=test, order_row=row + 1, order=order, order_source="datapipe",
                              resumes=resumes, fam_carnatic=fam, fam_hindustani=2, training_years=0, audio_ok=True,
                              timestamp=f"2026-11-01T10:{b:02d}:59Z", block_position=b + 1, condition=cond, style=style, tempo=tempo,
                              task="rating", stimulus=name, response=max(1, min(5, v + rng.choice([-1, 0, 0, 1])))))
@@ -75,7 +77,9 @@ def main():
     # "Start over": same ID, an abandoned first session with 1 block
     df = session("P000", "sabandon", 5, rng, eff, fam=2, base=0.3, blocks=1)
     write(df, "P000_sabandon_progress_b1.csv")
-    print(f"wrote fake data for {a.n} complete + 1 unfinished + 1 test + 1 duplicate-ID session to {a.out}")
+    # not in the Music Course and no roll number: the site gives a unique anonymous ID
+    write(session("anon-sanonym1", "sanonym1", 7, rng, eff, fam=3, base=0.4, course=0), "anon-sanonym1_sanonym1_trials.csv")
+    print(f"wrote fake data for {a.n} complete + 1 anonymous + 1 unfinished + 1 test + 1 duplicate-ID session to {a.out}")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f3f1ec">
+<title>Page Template</title>
+<!-- The design system. Keep these three lines, in this order, in every page:
+     tokens.css = colours, type, spacing (built from assets/tokens.json);
+     theme.css  = header, footer, page heading, cards, buttons, fields, lists, notices, tables, theme switch;
+     theme.js   = System / Light / Dark choice, remembered across pages, no flash of the wrong colours. -->
+<link rel="stylesheet" href="assets/tokens.css">
+<link rel="stylesheet" href="assets/theme.css">
+<script src="assets/theme.js"></script>
+<style>
+  /* Page layout only. Use the tokens (var(--space-4), var(--accent) …) rather than new colours or sizes. */
+  :root { --page-width: 720px; }
+  main { padding-top:28px; padding-bottom:48px; }
+  .type-scale > * + * { margin-top:var(--space-4); }
+  .type-scale span.muted { display:block; }
+  .colours td { vertical-align:middle; }
+  .colours td + td { white-space:nowrap; }
+  .chip { display:inline-block; width:22px; height:22px; margin-right:6px; vertical-align:middle; border-radius:var(--radius-sm); border:1px solid var(--line-strong); }
+  .card h3 { margin-top:var(--space-5); }
+  .card h2 + h3 { margin-top:0; }
+</style>
+</head>
+<body>
+<!-- ===== Site header: brand on the left; the theme switch (or, on the task page, the progress bar) on the right ===== -->
+<header class="site-header">
+  <div class="site-header-inner">
+    <span class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 17.5V6.6l10-2.1v10.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 6.6l10-2.1v3.4L9 10z" fill="currentColor"/><circle cx="6.6" cy="17.5" r="2.6" fill="currentColor"/><circle cx="16.6" cy="15.1" r="2.6" fill="currentColor"/></svg></span>Music and Memory</span>
+    <div class="theme-switch" role="group" aria-label="Theme">
+      <button type="button" data-theme-choice="system" title="Follow this device's setting">System</button>
+      <button type="button" data-theme-choice="light">Light</button>
+      <button type="button" data-theme-choice="dark">Dark</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- ===== Page heading: eyebrow (optional), title, short introduction ===== -->
+  <header class="page-head">
+    <p class="eyebrow">Design system</p>
+    <h1>Page template</h1>
+    <p class="lead">Copy this file to start a new page, then delete the sections you don't need. Everything here comes from the shared design files, so it matches the task and changes with it.</p>
+  </header>
+
+  <!-- ===== How to use ===== -->
+  <section class="card">
+    <h2>Start a new page</h2>
+    <p>Put these three lines in the page's <code>&lt;head&gt;</code>, in this order:</p>
+<pre><code>&lt;link rel="stylesheet" href="assets/tokens.css"&gt;
+&lt;link rel="stylesheet" href="assets/theme.css"&gt;
+&lt;script src="assets/theme.js"&gt;&lt;/script&gt;</code></pre>
+    <p>Then build the body from these parts:</p>
+<pre><code>&lt;header class="site-header"&gt;&lt;div class="site-header-inner"&gt;…&lt;/div&gt;&lt;/header&gt;
+&lt;main&gt;
+  &lt;header class="page-head"&gt;&lt;h1&gt;Title&lt;/h1&gt;&lt;p class="lead"&gt;…&lt;/p&gt;&lt;/header&gt;
+  &lt;section class="card"&gt;&lt;h2&gt;Section&lt;/h2&gt;…&lt;/section&gt;
+  &lt;div class="actions"&gt;&lt;button&gt;Continue&lt;/button&gt;&lt;/div&gt;
+&lt;/main&gt;
+&lt;footer class="site-footer"&gt;…&lt;/footer&gt;</code></pre>
+    <p class="muted">To change a colour, font or size on every page, edit <code>assets/tokens.json</code> and run <code>npm run tokens</code>. The same file imports into design tools that read W3C design tokens, such as Tokens Studio for Figma or Style Dictionary.</p>
+  </section>
+
+  <!-- ===== Headings and text ===== -->
+  <section class="card type-scale">
+    <h2>Headings and text</h2>
+    <div><span class="muted">h1 · page title</span><h1>Music and Memory Task</h1></div>
+    <div><span class="muted">h2 · card title</span><h2>Choose a theme</h2></div>
+    <div><span class="muted">h3 · sub-section</span><h3>Block 1 of 5</h3></div>
+    <div><span class="muted">.eyebrow · small label above a heading</span><p class="eyebrow">Step 2 of 4</p></div>
+    <div><span class="muted">.lead · introduction under a page title</span><p class="lead">A few questions before you start.</p></div>
+    <div>
+      <span class="muted">body text</span>
+      <p>Use headphones, sit somewhere quiet, and keep this page open and in front until the end. <a href="#colours">Links look like this.</a></p>
+      <p class="muted">.muted is for secondary notes, such as how the data are used.</p>
+      <p><span class="ok">7 of 9 in the right place</span> · <span class="bad">Enter exactly 10 digits</span></p>
+    </div>
+  </section>
+
+  <!-- ===== Colours (read live from tokens.css, so this table is always current) ===== -->
+  <section class="card">
+    <h2 id="colours">Colours</h2>
+    <p class="muted">Each page uses only these. Light and dark have the same names, so a page written once works in both.</p>
+    <table class="colours">
+      <thead><tr><th>Token</th><th>Light</th><th>Dark</th></tr></thead>
+      <tbody id="colourRows"></tbody>
+    </table>
+  </section>
+
+  <!-- ===== Page layout: steps, ticked list, label and text pairs, consent tick boxes ===== -->
+  <section class="card">
+    <h2>Page layout</h2>
+    <h3>Multi-step pages <code>.page-nav</code></h3>
+    <p class="muted">Split long information into short steps that each fit on one screen. Above each step's heading: Back on the left, the step count on the right (no Back on the first step).</p>
+    <div class="page-nav"><button type="button" class="back-link">← Back</button><span class="step-count">Step 2 of 6</span></div>
+    <h3>Steps <code>.steps</code></h3>
+    <ol class="steps">
+      <li><b>About you</b><span>Whether you are in the Music Course, and your music background.</span></li>
+      <li><b>Practice</b><span>Two short number lists without music.</span></li>
+      <li><b>Five blocks</b><span>About 3 minutes each.</span></li>
+    </ol>
+    <h3>Ticked list <code>.checklist</code></h3>
+    <ul class="checklist">
+      <li>Wear headphones and sit somewhere quiet.</li>
+      <li>Keep this page open and in front until the end.</li>
+    </ul>
+    <h3>Label and text <code>.facts</code></h3>
+    <dl class="facts">
+      <dt>What we record</dt><dd>Your answers and ratings, and how long you took.</dd>
+      <dt>Taking part is voluntary</dt><dd>You can stop at any time by closing the page.</dd>
+    </dl>
+    <h3>Tick boxes <code>.checks</code></h3>
+    <fieldset class="choice"><legend>To take part, please confirm each statement.</legend>
+      <div class="checks">
+        <label class="check"><input type="checkbox" checked><span>I have read and understood the information on this page.</span></label>
+        <label class="check"><input type="checkbox"><span>I agree to take part.</span></label>
+      </div>
+    </fieldset>
+    <div class="actions">
+      <button type="button">I agree, continue</button>
+      <button type="button" class="secondary">I don't want to take part</button>
+    </div>
+  </section>
+
+  <!-- ===== Buttons: put a page's buttons in .actions at the end of the page ===== -->
+  <section class="card">
+    <h2>Buttons</h2>
+    <div class="actions">
+      <button type="button">Continue</button>
+      <button type="button" class="secondary">Download data</button>
+      <button type="button" disabled>Not yet</button>
+    </div>
+  </section>
+
+  <!-- ===== Form fields ===== -->
+  <section class="card">
+    <h2>Form fields</h2>
+    <fieldset class="choice">
+      <legend>Are you part of the Music Course?</legend>
+      <div class="seg">
+        <label><input type="radio" name="demoCourse" value="yes" checked><span>Yes</span></label>
+        <label><input type="radio" name="demoCourse" value="no"><span>No</span></label>
+      </div>
+    </fieldset>
+    <label for="demoName">Full name</label>
+    <input type="text" id="demoName" placeholder="As on your ID card" autocomplete="off">
+    <label for="demoRoll">Roll number</label>
+    <input type="text" id="demoRoll" inputmode="numeric" value="12345" aria-describedby="demoRollMsg">
+    <p class="field-msg err" id="demoRollMsg">Enter exactly 10 digits.</p>
+    <label for="demoFam">How familiar are you with Carnatic music?</label>
+    <select id="demoFam"><option>choose 1–5</option><option>1 · not at all</option><option>5 · very</option></select>
+  </section>
+
+  <!-- ===== Notices, progress and tables ===== -->
+  <section class="card">
+    <h2>Notices, progress and tables</h2>
+    <div class="warn">You switched away from this page. Please keep it in front until the end.</div>
+    <div class="bar" role="progressbar" aria-label="Example progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="40"><div style="width:40%"></div></div>
+    <table>
+      <thead><tr><th>Condition</th><th>Numbers recalled</th><th>Mood</th></tr></thead>
+      <tbody>
+        <tr><td>Indian style, slow</td><td>63%</td><td>4</td></tr>
+        <tr><td>Quiet</td><td>58%</td><td>3</td></tr>
+      </tbody>
+    </table>
+  </section>
+</main>
+
+<!-- ===== Site footer ===== -->
+<footer class="site-footer">Tokens: <code>assets/tokens.json</code> · Styles: <code>assets/theme.css</code> · Theme switch: <code>assets/theme.js</code></footer>
+<script>
+"use strict";
+// Colour table: each chip carries .theme-light or .theme-dark, so it shows that palette whatever the page shows.
+const COLOURS = ["bg", "card", "fg", "heading", "muted", "line", "line-strong", "accent", "accent-hover", "accent-fg",
+                 "accent-soft", "ok", "bad", "warn-bg", "warn-fg", "warn-line", "track"];
+const cell = (name, theme) => `<td><span class="chip theme-${theme}" style="background:var(--${name})"></span><code></code></td>`;
+const rowsEl = document.getElementById("colourRows");
+rowsEl.innerHTML = COLOURS.map(n => `<tr data-token="${n}"><td><code>--${n}</code></td>${cell(n, "light")}${cell(n, "dark")}</tr>`).join("");
+rowsEl.querySelectorAll(".chip").forEach(chip => {
+  const name = chip.closest("tr").dataset.token;
+  chip.nextElementSibling.textContent = getComputedStyle(chip).getPropertyValue("--" + name).trim();
+});
+</script>
+</body>
+</html>
