@@ -1,0 +1,36 @@
+/* Colour scheme shared by index.html and test.html.
+   One neutral palette with a single indigo accent, in a light and a dark version.
+   The theme follows the device ("system") until the participant picks Light or Dark,
+   which theme.js stores and applies as <html data-theme="light|dark">. */
+:root {
+  color-scheme: light;
+  --bg: #f5f6f8;          /* page */
+  --card: #ffffff;        /* cards, inputs */
+  --fg: #1c1f24;          /* text */
+  --muted: #5b6470;       /* secondary text */
+  --line: #d5dae1;        /* dividers, card borders */
+  --line-strong: #8b939e; /* input and key borders */
+  --accent: #3b55c9;      /* buttons, selection, progress */
+  --accent-fg: #ffffff;   /* text on accent */
+  --accent-soft: #e9edfb; /* hover and pressed keys */
+  --ok: #1e7a3c;
+  --bad: #c0352b;
+  --warn-bg: #fff6dc;
+  --warn-fg: #5c4300;
+  --warn-line: #e8cf87;
+  --track: #e3e6eb;       /* empty part of bars */
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #121418; --card: #1b1e24; --fg: #e7e9ee; --muted: #9ba3ae; --line: #30353d; --line-strong: #6b7480;
+    --accent: #8fa3ff; --accent-fg: #0f1530; --accent-soft: #232a46; --ok: #6fcf8d; --bad: #f28b82;
+    --warn-bg: #33290a; --warn-fg: #f1d27c; --warn-line: #5e4c17; --track: #2a2e36;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #121418; --card: #1b1e24; --fg: #e7e9ee; --muted: #9ba3ae; --line: #30353d; --line-strong: #6b7480;
+  --accent: #8fa3ff; --accent-fg: #0f1530; --accent-soft: #232a46; --ok: #6fcf8d; --bad: #f28b82;
+  --warn-bg: #33290a; --warn-fg: #f1d27c; --warn-line: #5e4c17; --track: #2a2e36;
+}

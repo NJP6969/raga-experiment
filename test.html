@@ -3,18 +3,24 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f5f6f8">
 <title>Stimulus Check</title>
+<link rel="stylesheet" href="assets/theme.css">
+<script src="assets/theme.js"></script>
 <style>
-  :root { --bg:#fafaf7; --fg:#1d1d1b; --muted:#6b6b66; --line:#d9d9d2; --accent:#2f5d50; --accent-fg:#fff; --card:#fff; --track:#e7e7e0; }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg:#161715; --fg:#ececE6; --muted:#9a9a92; --line:#33342f; --accent:#7fb8a4; --accent-fg:#102019; --card:#1e1f1c; --track:#2a2b27; }
-  }
   * { box-sizing:border-box; }
   body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
   main { max-width:720px; margin:0 auto; padding:32px 16px 64px; }
   h1 { font-size:1.4rem; margin:0 0 .25rem; }
   .muted { color:var(--muted); font-size:.9rem; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; margin:16px 0; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin:16px 0; }
+  .top { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:.25rem; }
+  .top h1 { margin:0; }
+  .theme-switch { display:inline-flex; border:1px solid var(--line-strong); border-radius:8px; overflow:hidden; }
+  .theme-switch button { border:0; border-radius:0; padding:6px 12px; font-size:.85rem; color:var(--fg); }
+  .theme-switch button + button { border-left:1px solid var(--line-strong); }
+  .theme-switch button[aria-pressed="true"] { background:var(--accent); color:var(--accent-fg); }
+  button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
   button { font:inherit; border-radius:8px; border:1px solid var(--accent); background:transparent; color:var(--accent); cursor:pointer; }
   button:disabled { opacity:.4; cursor:default; }
   .tracks { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
@@ -36,7 +42,14 @@
 </head>
 <body>
 <main>
-  <h1>Stimulus check</h1>
+  <div class="top">
+    <h1>Stimulus check</h1>
+    <div class="theme-switch" role="group" aria-label="Theme">
+      <button type="button" data-theme-choice="system" title="Follow this device's setting">System</button>
+      <button type="button" data-theme-choice="light">Light</button>
+      <button type="button" data-theme-choice="dark">Dark</button>
+    </div>
+  </div>
   <p class="muted">All four files load fully before playback, so nothing buffers mid-play. Switching tracks keeps the position, so you can compare the same bar in each version (compare slow with slow, fast with fast). Loops are gapless. Use headphones. Raga Shankarabharanam (the Western major scale), same violin in all four.</p>
 
   <div class="card" id="loading">
@@ -67,6 +80,12 @@ const TRACKS = [
   { file: "stimuli/D_western_fast.mp3", name: "D · Western style, fast", desc: "120 BPM · same as C, double tempo" }
 ];
 const $ = id => document.getElementById(id);
+
+// Theme switcher (System / Light / Dark); the same choice is used on the task page.
+const themeBtns = [...document.querySelectorAll(".theme-switch button")];
+const markTheme = () => themeBtns.forEach(b => b.setAttribute("aria-pressed", String(b.dataset.themeChoice === Theme.get())));
+themeBtns.forEach(b => b.onclick = () => Theme.set(b.dataset.themeChoice));
+Theme.onChange(markTheme); markTheme();
 let ctx, master, buffers = [], cur = 0, src = null, srcGain = null, playing = false, t0 = 0, pausedAt = 0;
 
 const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
