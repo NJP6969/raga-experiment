@@ -59,6 +59,31 @@
   .opt { font-weight:400; color:var(--muted); font-size:.9rem; }
   .field-msg { margin:4px 0 0; font-size:.85rem; color:var(--muted); min-height:1.25em; }
   .field-msg.err { color:var(--bad); }
+  .theme-opts { display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin:12px 0 16px; }
+  .theme-opts label { margin:0; position:relative; font-weight:400; }
+  .theme-opts input { position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer; }
+  .opt-card { display:flex; flex-direction:column; align-items:center; gap:6px; height:100%; padding:12px 8px; border:1px solid var(--line-strong); border-radius:10px; background:var(--card); text-align:center; }
+  .opt-card b { font-weight:600; }
+  .opt-card small { color:var(--muted); font-size:.78rem; line-height:1.3; }
+  .theme-opts input:checked + .opt-card { border-color:var(--accent); box-shadow:inset 0 0 0 2px var(--accent); }
+  .theme-opts input:focus-visible + .opt-card { outline:2px solid var(--accent); outline-offset:2px; }
+  .sw { width:34px; height:34px; flex:none; border-radius:50%; border:1px solid var(--line-strong); }
+  .sw-system { background:linear-gradient(90deg, #f5f6f8 50%, #121418 50%); }
+  .sw-light { background:linear-gradient(135deg, #f5f6f8 55%, #3b55c9 55%); }
+  .sw-dark { background:linear-gradient(135deg, #121418 55%, #8fa3ff 55%); }
+  .preview { display:grid; grid-template-columns:auto 1fr; gap:12px 16px; align-items:center; padding:14px; border:1px solid var(--line); border-radius:10px; background:var(--bg); }
+  .preview-digit { font-size:3rem; font-weight:700; width:64px; text-align:center; line-height:1; }
+  .preview-keys { display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; max-width:220px; }
+  .preview-keys span, .preview-scale span { padding:4px 0; text-align:center; font-weight:700; border:1px solid var(--line-strong); border-radius:6px; background:var(--card); }
+  .preview-keys span.done, .preview-scale span.on { background:var(--accent); color:var(--accent-fg); border-color:var(--accent); }
+  .preview-keys span.done { grid-column:span 3; font-weight:600; }
+  .preview-scale { grid-column:1 / -1; display:flex; gap:6px; }
+  .preview-scale span { flex:1; }
+  .preview-note { grid-column:1 / -1; margin:0; }
+  @media (max-width:420px) {
+    .theme-opts { grid-template-columns:1fr; }
+    .opt-card { flex-direction:row; text-align:left; gap:12px; }
+  }
   .ok { color:var(--ok); } .bad { color:var(--bad); }
 </style>
 </head>
@@ -184,7 +209,7 @@ function mean(a) { return a.length ? a.reduce((x, y) => x + y, 0) / a.length : N
 function fmt(x, d = 0) { return Number.isFinite(x) ? x.toFixed(d) : "–"; }
 
 function log(r) {
-  rows.push({ participant: P.id, session_id: P.session, music_course: P.musicCourse, full_name: P.name, device: P.device, test_run: FAST ? 1 : 0, order_row: P.row + 1, order: P.order.join(""), order_source: P.orderSource, resumes: P.resumes, fam_carnatic: P.famC, fam_hindustani: P.famH, training_years: P.training,
+  rows.push({ participant: P.id, session_id: P.session, music_course: P.musicCourse, full_name: P.name, device: P.device, theme: Theme.get(), theme_resolved: Theme.resolved(), test_run: FAST ? 1 : 0, order_row: P.row + 1, order: P.order.join(""), order_source: P.orderSource, resumes: P.resumes, fam_carnatic: P.famC, fam_hindustani: P.famH, training_years: P.training,
               audio_ok: audioOK, timestamp: new Date().toISOString(), ...r });
 }
 
@@ -300,6 +325,30 @@ async function setup() {
   keepAwake();
   window.addEventListener("beforeunload", leaveGuard);
   for (const a of Object.values(players)) a.load();          // start downloading every track now
+}
+
+/* ---------- setup: theme (System until the participant picks Light or Dark) ---------- */
+Theme.onChange(() => { const el = document.getElementById("sysNow"); if (el) el.textContent = Theme.resolved("system"); });
+async function themePage() {
+  const opt = (v, name, desc) => `<label><input type="radio" name="theme" value="${v}"${Theme.get() === v ? " checked" : ""}>
+    <span class="opt-card"><span class="sw sw-${v}"></span><span><b>${name}</b><br><small>${desc}</small></span></span></label>`;
+  show(`<div class="card"><h2>Choose a theme</h2>
+    <p>Pick how the task looks. It changes straight away, so try each one and check the preview. <b>System</b> follows your device's setting.</p>
+    <div class="theme-opts" role="radiogroup" aria-label="Theme">
+      ${opt("system", "System", `Follows this device (now <span id="sysNow">${Theme.resolved("system")}</span>)`)}
+      ${opt("light", "Light", "Dark text on a light background")}
+      ${opt("dark", "Dark", "Light text on a dark background")}
+    </div>
+    <div class="preview" role="img" aria-label="Preview of the task screens in this theme">
+      <div class="preview-digit">7</div>
+      <div class="preview-keys"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span class="done">Done</span></div>
+      <div class="preview-scale"><span>1</span><span>2</span><span>3</span><span class="on">4</span><span>5</span></div>
+      <p class="muted preview-note">Numbers, the keypad and the rating buttons will look like this.</p>
+    </div>
+    <button id="go">Continue</button></div>`);
+  document.querySelectorAll('input[name="theme"]').forEach(r => r.onchange = () => Theme.set(r.value));
+  const go = document.getElementById("go"); go.focus();
+  await new Promise(res => go.onclick = () => { go.disabled = true; res(); });
 }
 
 async function volumeCheck() {
@@ -464,7 +513,7 @@ async function runBlock(pos, key) {
     participant: P.id, session_id: P.session, music_course: P.musicCourse, full_name: P.name, test_run: FAST ? 1 : 0, block_position: pos + 1, condition: key, label: c.label, style: c.style, tempo: c.tempo,
     order: P.order.join(""), recall_prop_correct: rc.prop, recall_lists_perfect: rc.perfect,
     alertness: rat.alertness, mood: rat.mood, indian: rat.indian ?? "",
-    tab_hidden_count: hiddenCount, audio_ok: audioOK, resumes: P.resumes
+    tab_hidden_count: hiddenCount, audio_ok: audioOK, resumes: P.resumes, theme: Theme.get()
   });
   if (pos < 4) await rest(REST_S);
 }
@@ -574,6 +623,7 @@ async function runBaseline() {               // one "right now" alertness/mood r
     await setup();
   }
   saveState();
+  await themePage();
   await volumeCheck();
   if (!S.practiceDone) {
     await screen(`<h2>The task: number lists</h2>

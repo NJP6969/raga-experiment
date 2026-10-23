@@ -110,10 +110,12 @@ async function downloadCSV(page, buttonSel) {
 
 module.exports = { test, expect, TASK, isTouch, open, waitEnabled, advanceUntil, press, fillIntro, enterDigits, doList, rate, parseCSV, downloadCSV };
 
-// Intro page -> volume check, ending on the practice instructions page.
+// Intro page -> theme (setup) -> volume check, ending on the practice instructions page.
 async function startSession(page, touch, intro = {}) {
   await fillIntro(page, intro);
   await press(page, page.locator("#start"), touch);
+  await expect(page.getByRole("heading", { name: "Choose a theme" })).toBeVisible();
+  await press(page, page.locator("#go"), touch);                       // keep the default (System)
   await waitEnabled(page, page.locator("#ok"));
   await press(page, page.locator("#ok"), touch);
   await expect(page.getByRole("heading", { name: "The task: number lists" })).toBeVisible();
