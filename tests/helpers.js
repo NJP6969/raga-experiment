@@ -53,8 +53,9 @@ async function advanceUntil(page, locator, { step = 500, max = 120_000 } = {}) {
 
 async function press(page, locator, touch) { return touch ? locator.tap() : locator.click(); }
 
-// First page: information and consent. Tick all three statements, then "I agree, continue".
+// Information and consent: six short steps. Next through them, tick all three statements, then "I agree, continue".
 async function acceptConsent(page) {
+  for (let i = 0; i < 10 && !(await page.locator("#agree").isVisible()); i++) await page.locator("#infoNext").click();
   for (const box of await page.locator("#consent input[type=checkbox]").all()) await box.check();
   await page.locator("#agree").click();
   await expect(page.getByRole("heading", { name: "About you" })).toBeVisible();
@@ -62,7 +63,7 @@ async function acceptConsent(page) {
 
 // Consent, then the "About you" page (everything except pressing Begin).
 async function fillIntro(page, { course = "yes", name = "Test Student", roll = "2023102029", famC = "3", famH = "2", training = "0" } = {}) {
-  if (await page.locator("#agree").isVisible()) await acceptConsent(page);
+  if (await page.locator("#infoNext, #agree").first().isVisible()) await acceptConsent(page);
   await page.getByRole("radio", { name: course === "yes" ? "Yes" : "No", exact: true }).check();
   if (course === "yes") await page.fill("#pname", name);
   await page.fill("#pid", roll);

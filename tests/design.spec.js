@@ -43,7 +43,7 @@ test.describe("template page", () => {
     await page.goto("template.html");
     for (const h of ["Page template", "Start a new page", "Headings and text", "Colours", "Page layout", "Buttons", "Form fields", "Notices, progress and tables"])
       await expect(page.getByRole("heading", { name: h, exact: true })).toBeVisible();
-    for (const part of [".site-header .brand", ".page-head .lead", ".steps", ".checklist", ".facts", ".checks .check", ".actions", ".site-footer"])
+    for (const part of [".site-header .brand", ".page-head .lead", ".page-nav .back-link", ".step-count", ".steps", ".checklist", ".facts", ".checks .check", ".actions", ".site-footer"])
       await expect(page.locator(part).first(), part).toBeVisible();
     await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeEnabled();
     await expect(page.getByRole("button", { name: "Not yet" })).toBeDisabled();

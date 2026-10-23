@@ -12,6 +12,7 @@
   /* Task layout only. Text, headings, cards, buttons, fields, notices and colours come from
      assets/theme.css and assets/tokens.css (built from assets/tokens.json). */
   main { padding-top:28px; padding-bottom:48px; }
+  @media (max-width:480px) { main { padding-top:18px; } }
   /* Focus mode: during the lists, lead-ins and rests only the task is on screen (no header or footer). */
   body.focus .site-header, body.focus .site-footer { display:none; }
   body.focus main { padding-top:32px; }
@@ -96,7 +97,7 @@ const DATAPIPE_ID = "hmU1FxSIMrPB";         // DataPipe experiment; files land i
 const LEAD_IN_S = FAST ? 3 : 30;
 const REST_S = FAST ? 2 : 20;
 const RECALL_LEN = 9, RECALL_LISTS = 8;     // serial recall: 8 lists of 9 digits per block (all of 1-9, random order)
-// Shown on the information and consent page. Fill these in before running the study; empty ones are left out
+// Shown on the information and consent pages. Fill these in before running the study; empty ones are left out
 // (without a contact, participants are told to ask their course instructor).
 const STUDY = {
   team: "",      // who runs the study, e.g. "the Music Course team, Department of …"
@@ -222,8 +223,8 @@ function show(html, phase = null, arg = null) {
   window.scrollTo(0, 0);                                                            // each page opens at its top
 }
 /* Information pages: a heading (title and a short introduction), then cards, then the buttons. */
-const pageHead = (title, lead = "", eyebrow = "") =>
-  `<header class="page-head">${eyebrow ? `<p class="eyebrow">${eyebrow}</p>` : ""}<h1>${title}</h1>${lead ? `<p class="lead">${lead}</p>` : ""}</header>`;
+const pageHead = (title, lead = "", eyebrow = "", before = "") =>
+  `<header class="page-head">${before}${eyebrow ? `<p class="eyebrow">${eyebrow}</p>` : ""}<h1>${title}</h1>${lead ? `<p class="lead">${lead}</p>` : ""}</header>`;
 const card = (body, title = "") => `<section class="card">${title ? `<h2>${title}</h2>` : ""}${body}</section>`;
 const actions = buttons => `<div class="actions">${buttons}</div>`;
 function screen(head, body, btn = "Continue", phase = null, arg = null) {
@@ -293,57 +294,75 @@ async function assignOrder() {             // next order in rotation from DataPi
 }
 let orderSource = "url";
 
-/* ---------- information and consent (first page); nothing is saved or sent before the participant agrees ---------- */
+/* ---------- information and consent: six short pages, one screen each; nothing is saved or sent before agreeing ---------- */
 let consentAt = "";
+function infoPages() {
+  const contact = STUDY.contact ? `Email <a href="mailto:${esc(STUDY.contact)}">${esc(STUDY.contact)}</a>.` : "Ask your course instructor.";
+  return [
+    { title: "Welcome", lead: "Thank you for your interest in this study.",
+      body: card(`<p>This study looks at whether background music changes how well people remember short lists of numbers.</p>
+        ${STUDY.team ? `<p>It is run by ${esc(STUDY.team)}.</p>` : ""}
+        <ul class="checklist"><li>About 18 minutes</li><li>On a phone, tablet or computer</li><li>With headphones</li></ul>`) },
+    { title: "What you'll do", lead: "Five parts, one after the other.",
+      body: card(`<ol class="steps">
+        <li><b>About you</b><span>A few questions about you.</span></li>
+        <li><b>Setup</b><span>Choose a theme and set your volume.</span></li>
+        <li><b>Practice</b><span>Two short lists without music, then two quick questions.</span></li>
+        <li><b>Five blocks, about 3 minutes each</b><span>Different music or silence each time: listen 30 seconds, remember ${RECALL_LISTS} lists of ${RECALL_LEN} digits, rate how you feel.</span></li>
+        <li><b>Your results</b><span>See how you did.</span></li></ol>`) },
+    { title: "Before you start", lead: "These make your answers count.",
+      body: card(`<ul class="checklist">
+        <li>Wear headphones and sit somewhere quiet.</li>
+        <li>Keep this page in front until the end. Leaving it during a block is recorded.</li>
+        <li>Set your volume once, at the start, and leave it.</li>
+        <li>If the page closes, open the same link on this device within 6 hours to continue.</li></ul>`) },
+    { title: "Your data", lead: "What we record, and where it goes.",
+      body: card(`<dl class="facts">
+        <dt>What we record</dt><dd>Your answers, times and ratings; your music background and course; your name and roll number if given; your device, theme, and how often you leave the page during a block.</dd>
+        <dt>What we don't</dt><dd>No microphone, camera or location.</dd>
+        <dt>Where it goes</dt><dd>Sent securely to DataPipe, a research data service, which saves it to the study's Google Drive folder. Until then, it stays in this browser.</dd></dl>`) },
+    { title: "Your choices", lead: "Taking part is up to you.",
+      body: card(`<dl class="facts">
+        <dt>Voluntary</dt><dd>Stop at any time by closing the page; no reason needed. Finished blocks are saved as you go.</dd>
+        <dt>Your name and roll number</dt><dd>Used only for course participation and to link your sessions; removed before the data are analysed or shared.</dd>
+        <dt>Questions, or removing your answers</dt><dd>${contact} With a roll number, your answers can be removed later; without one, they cannot be traced to you, so they cannot be removed.</dd></dl>
+        ${STUDY.ethics ? `<p class="muted">${esc(STUDY.ethics)}</p>` : ""}`) },
+    { title: "Consent", lead: "To take part, please confirm each statement.", consent: true,
+      body: card(`<fieldset class="choice" id="consent"><legend class="visually-hidden">Consent statements</legend><div class="checks">
+        <label class="check"><input type="checkbox" name="consent"><span>I have read and understood the information.</span></label>
+        <label class="check"><input type="checkbox" name="consent"><span>I know taking part is voluntary and I can stop at any time.</span></label>
+        <label class="check"><input type="checkbox" name="consent"><span>I agree to take part, and to my answers being used for research without my name or roll number.</span></label>
+        </div></fieldset>`) }
+  ];
+}
 async function consentPage() {
-  for (;;) {
-    const contact = STUDY.contact ? `Email <a href="mailto:${esc(STUDY.contact)}">${esc(STUDY.contact)}</a>` : "Ask your course instructor";
-    show(`${pageHead("Welcome", "Please read this page before you decide whether to take part. It explains what the study is about, what you will do and what happens to your answers.", "Information and consent")}
-      ${card(`<p>This study looks at whether background music changes how well people remember short lists of numbers. You will do the same short memory task five times, with different background music (or silence) each time, and answer a few quick questions about how you feel.</p>
-        ${STUDY.team ? `<p>The study is run by ${esc(STUDY.team)}.</p>` : ""}
-        <p class="muted">About 18 minutes. It works on a phone, tablet or computer.</p>`, "About this study")}
-      ${card(`<ol class="steps">
-          <li><b>About you</b><span>Whether you are in the Music Course, and your music background.</span></li>
-          <li><b>Setup</b><span>Choose how the page looks and set a comfortable volume.</span></li>
-          <li><b>Practice</b><span>Two short number lists without music, then two quick questions about how you feel.</span></li>
-          <li><b>Five blocks, about 3 minutes each</b><span>30 seconds of listening, then ${RECALL_LISTS} lists of ${RECALL_LEN} digits to type back in order, then two or three quick ratings. A short rest between blocks.</span></li>
-          <li><b>Your results</b><span>See how you did while your answers are saved.</span></li>
-        </ol>`, "What you'll do")}
-      ${card(`<ul class="checklist">
-          <li>Wear headphones and sit somewhere quiet where you won't be interrupted for about 20 minutes.</li>
-          <li>Keep this page open and in front until the end. Switching to another tab or app during a block is recorded and can make your answers unusable.</li>
-          <li>Set your volume once, at the start, and leave it there.</li>
-          <li>If the page closes by accident, open the same link on the same device within 6 hours to continue where you left off.</li>
-        </ul>`, "Before you start")}
-      ${card(`<dl class="facts">
-          <dt>What we record</dt>
-          <dd>Your answers to the number lists and how long you took, your ratings, your music background, whether you are in the Music Course, your name and roll number if you give them, the kind of device and whether you used the keypad or a keyboard, the theme you choose, the time of each answer, and how often you leave the page during a block.</dd>
-          <dt>What we don't record</dt>
-          <dd>The page does not use your microphone, camera or location.</dd>
-          <dt>Where your answers go</dt>
-          <dd>They are sent over an encrypted connection to DataPipe, a service for research data, which saves them to the study's Google Drive folder. Your progress is also kept in this browser so you can continue if the page closes; it is deleted once your answers are saved.</dd>
-          <dt>Your name and roll number</dt>
-          <dd>Used only to record course participation and to link your sessions. They are removed before the data are analysed or shared.</dd>
-          <dt>Taking part is voluntary</dt>
-          <dd>You can stop at any time, without giving a reason, by closing the page. Blocks you have already finished are saved as you go.</dd>
-          <dt>Questions, or removing your answers later</dt>
-          <dd>${contact}. If you gave a roll number, your answers can be found and removed. Without one, they cannot be traced back to you, so they cannot be removed once you have finished.</dd>
-        </dl>${STUDY.ethics ? `<p class="muted">${esc(STUDY.ethics)}</p>` : ""}`, "Your data and privacy")}
-      ${card(`<fieldset class="choice" id="consent"><legend>To take part, please confirm each statement.</legend><div class="checks">
-          <label class="check"><input type="checkbox" name="consent"><span>I have read and understood the information on this page.</span></label>
-          <label class="check"><input type="checkbox" name="consent"><span>I understand that taking part is voluntary and that I can stop at any time by closing the page.</span></label>
-          <label class="check"><input type="checkbox" name="consent"><span>I agree to take part, and to my answers being used for research with my name and roll number removed.</span></label>
-        </div></fieldset>`, "Consent")}
-      ${actions(`<button id="agree" disabled>I agree, continue</button><button id="decline" class="secondary">I don't want to take part</button>`)}`, "intro");
-    const boxes = [...document.querySelectorAll('input[name="consent"]')], agree = document.getElementById("agree");
-    boxes.forEach(b => b.onchange = () => { agree.disabled = !boxes.every(x => x.checked); });
-    const yes = await new Promise(res => { agree.onclick = () => res(true); document.getElementById("decline").onclick = () => res(false); });
-    if (yes) { consentAt = new Date().toISOString(); return; }
-    show(`${pageHead("Thank you for your time", "You chose not to take part.")}
-      ${card(`<p>None of your answers have been recorded. You can close this page now.</p>
-        <p class="muted">If you change your mind, go back to the information and start again.</p>`)}
-      ${actions(`<button id="back" class="secondary">Back to the information</button>`)}`);
-    await new Promise(res => document.getElementById("back").onclick = res);
+  const pages = infoPages(), $ = id => document.getElementById(id);
+  for (let i = 0; ;) {
+    const pg = pages[i];
+    const nav = `<div class="page-nav">${i > 0 ? `<button type="button" class="back-link" id="infoBack">← Back</button>` : ""}<span class="step-count">Step ${i + 1} of ${pages.length}</span></div>`;
+    show(`${pageHead(pg.title, pg.lead, "", nav)}${pg.body}
+      ${actions(pg.consent ? `<button id="agree" disabled>I agree, continue</button><button id="decline" class="secondary">I don't want to take part</button>`
+                           : `<button id="infoNext">Next</button>`)}`, i === 0 ? "intro" : null);
+    if (pg.consent) {
+      const boxes = [...document.querySelectorAll('input[name="consent"]')];
+      boxes.forEach(b => b.onchange = () => { $("agree").disabled = !boxes.every(x => x.checked); });
+    } else $("infoNext").focus({ preventScroll: true });
+    const go = await new Promise(res => {
+      if ($("infoBack")) $("infoBack").onclick = () => res("back");
+      if (pg.consent) { $("agree").onclick = () => res("agree"); $("decline").onclick = () => res("decline"); }
+      else $("infoNext").onclick = () => res("next");
+    });
+    if (go === "next") i++;
+    else if (go === "back") i--;
+    else if (go === "agree") { consentAt = new Date().toISOString(); return; }
+    else {
+      show(`${pageHead("Thank you for your time", "You chose not to take part.")}
+        ${card(`<p>None of your answers have been recorded. You can close this page now.</p>
+          <p class="muted">If you change your mind, read the information again and start.</p>`)}
+        ${actions(`<button id="again" class="secondary">Back to the information</button>`)}`);
+      await new Promise(res => $("again").onclick = res);
+      i = 0;
+    }
   }
 }
 

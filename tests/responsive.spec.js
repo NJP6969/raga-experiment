@@ -17,7 +17,11 @@ test("every page fits the screen; touch targets and inputs are comfortable", asy
   test.setTimeout(120_000);
   const touch = isTouch(testInfo);
   await open(page, TASK);
-  await noSideScroll(page, "consent");
+  for (let i = 1; i <= 6; i++) {                                      // the six information and consent steps
+    await noSideScroll(page, `information step ${i}`);
+    if (i > 1 && touch) await minSize(page.locator("#infoBack"), 44, "Back link");
+    if (i < 6) await press(page, page.locator("#infoNext"), touch);
+  }
   if (touch) await minSize(page.locator(".check"), 44, "consent tick boxes");
   await fillIntro(page);
   await noSideScroll(page, "intro");
