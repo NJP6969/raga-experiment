@@ -25,6 +25,8 @@ test("every page fits the screen; touch targets and inputs are comfortable", asy
 
   await press(page, page.locator("#start"), touch);
   await expect(page.getByRole("heading", { name: "Choose a theme" })).toBeVisible();
+  expect(await page.evaluate(() => window.scrollY), "theme page opens at its top").toBe(0);
+  await expect(page.locator("#progress")).toBeInViewport();             // its progress bar is on screen
   await noSideScroll(page, "theme");
   if (touch) await minSize(page.locator(".opt-card"), 44, "theme options");
   await press(page, page.locator("#go"), touch);

@@ -221,7 +221,7 @@ function setBar(phase, arg) {
   box.querySelector(".bar").setAttribute("aria-valuenow", pct);
   box.hidden = false;
 }
-function show(html, phase = null, arg = null) { app.innerHTML = html; setBar(phase, arg); }
+function show(html, phase = null, arg = null) { app.innerHTML = html; setBar(phase, arg); window.scrollTo(0, 0); }   // each page opens at its top
 function screen(html, btn = "Continue", phase = null, arg = null) {
   return new Promise(res => {
     show(`<div class="card">${html}<button id="go">${btn}</button></div>`, phase, arg);
@@ -382,7 +382,7 @@ async function themePage() {
     </div>
     <button id="go">Continue</button></div>`, "setup");
   document.querySelectorAll('input[name="theme"]').forEach(r => r.onchange = () => Theme.set(r.value));
-  const go = document.getElementById("go"); go.focus();
+  const go = document.getElementById("go"); go.focus({ preventScroll: true });
   await new Promise(res => go.onclick = () => { go.disabled = true; res(); });
 }
 
