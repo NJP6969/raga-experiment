@@ -27,6 +27,7 @@ Steps (in this order, all reported in results/summary.txt):
     Robustness: linear mixed model on block-level proportions, random intercept per participant.
     Sensitivity: H2 refitted without blocks where the tab was hidden or that followed a resume.
     Manipulation check: "how Indian" rating ~ style_c + tempo_c + pos_c (linear mixed model).
+    Exploratory: H2 adjusted for device (phone/touch vs computer), when both occur.
  Coding: style_c = +0.5 Indian style / -0.5 Western style; tempo_c = +0.5 fast / -0.5 slow;
  music = 1 for any music block, 0 quiet; famC_z = standardised Carnatic familiarity.
 """
@@ -75,7 +76,7 @@ def digit_level(recall):
                         "list": r.trial, "serial_position": k + 1,
                         "correct": int(k < len(resp) and resp[k] == ch),
                         "fam_carnatic": r.fam_carnatic, "tab_hidden": getattr(r, "tab_hidden_so_far", 0),
-                        "resumes": r.resumes})
+                        "resumes": r.resumes, "device": getattr(r, "device", "computer")})
     return pd.DataFrame(out)
 
 
@@ -163,6 +164,8 @@ def main():
     res["H1"] = gee("correct ~ music + pos_c", dig, log, "H1: music vs quiet (all blocks)")
     res["H2"] = gee("correct ~ style_c * tempo_c + pos_c", music, log, "H2: style x tempo (music blocks)")
     res["H3"] = gee("correct ~ style_c * famC_z + tempo_c + pos_c", music, log, "H3: style x Carnatic familiarity (music blocks)")
+    if music["device"].nunique() > 1:
+        res["H2_device"] = gee("correct ~ style_c * tempo_c + pos_c + C(device)", music, log, "Exploratory: H2 adjusted for device (phone vs computer)")
     clean = music[(music["tab_hidden"].fillna(0) == 0) & (music["resumes"].fillna(0) == 0)]
     res["H2_sens"] = gee("correct ~ style_c * tempo_c + pos_c", clean, log, "Sensitivity: H2 without hidden-tab or resumed blocks")
 

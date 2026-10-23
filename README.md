@@ -26,7 +26,7 @@ python make_stimuli.py --assets ASSETS --fluidsynth PATH/fluidsynth.exe --gm PAT
 ```
 
 ## Flow
-1. Start screen (roll number, required; Carnatic and Hindustani familiarity, training, hearing check). Roll numbers link a student's sessions and must be removed before data are shared. Phones and tablets are told to use a laptop (typing digits needs a keyboard).
+1. Start screen (roll number, required; Carnatic and Hindustani familiarity, training, hearing check). Roll numbers link a student's sessions and must be removed before data are shared. Works on phones and computers: answers are entered on an on-screen keypad (1–9, –, ⌫, Done) or a physical keyboard; the device (`device`: touch/computer) and input method per list (`input`: keypad/keyboard) are recorded. On the Begin tap all tracks are unlocked for iPhone playback, and the screen is kept awake (Wake Lock) during the session. Phones and tablets are told to use a laptop (typing digits needs a keyboard).
 2. Order assignment: one of 10 Williams-design orders of the 5 conditions (each condition appears in each position twice and directly follows every other condition twice). Taken in rotation from DataPipe's condition counter when it is switched on (set it to 10 conditions); otherwise random. Recorded as `order_row`, `order`, `order_source`.
 3. Volume check with a music sample. All four tracks start downloading here; each block waits until its track can play through.
 4. Practice without music: 2 serial-recall lists with feedback, then one baseline "right now" alertness and mood rating (logged as block 0, condition `baseline`).

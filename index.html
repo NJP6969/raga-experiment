@@ -37,9 +37,14 @@
   .warn { background:#fff4d6; color:#5a4300; border:1px solid #e6cf85; border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:.9rem; }
   table { width:100%; border-collapse:collapse; font-size:.9rem; margin:12px 0; }
   th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); }
-  #digitIn { position:absolute; opacity:0; width:1px; height:1px; }
-  .slots { display:flex; gap:8px; justify-content:center; margin:12px 0; cursor:text; }
-  .slots span { width:2.2rem; height:3rem; border-bottom:3px solid var(--line); font-size:2rem; font-weight:700; display:flex; align-items:flex-end; justify-content:center; }
+  .slots { display:flex; gap:min(8px, 1.5vw); justify-content:center; margin:12px 0; }
+  .slots span { width:min(2.2rem, 8.5vw); height:3rem; border-bottom:3px solid var(--line); font-size:min(2rem, 7vw); font-weight:700; display:flex; align-items:flex-end; justify-content:center; }
+  .pad { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; width:100%; max-width:320px; margin:4px auto 0; }
+  .pad button { margin:0; padding:14px 0; font-size:1.5rem; font-weight:700; background:transparent; color:var(--fg); border-color:var(--line); touch-action:manipulation; user-select:none; }
+  .pad button { -webkit-tap-highlight-color:transparent; outline:none; }
+  .pad button:active { background:var(--line); }
+  .pad button.done { background:var(--accent); color:var(--accent-fg); border-color:var(--accent); font-size:1.1rem; }
+  .pad button.done:disabled { opacity:.35; }
   .slots span.cur { border-color:var(--accent); }
   .seq { font-size:1.6rem; font-weight:700; letter-spacing:.3em; }
   .ok { color:var(--ok); } .bad { color:var(--bad); }
@@ -79,7 +84,7 @@ const app = document.getElementById("app");
 const rows = [];            // trial-level data
 const blockSummaries = [];
 let P = {};                 // participant info
-let audioOK = true, hiddenCount = 0, inBlock = false;
+let audioOK = true, hiddenCount = 0, inBlock = false, chimeCtx = null;
 const players = {};         // one preloaded <audio> per music condition
 for (const [k, c] of Object.entries(CONDITIONS)) {
   if (!c.file) continue;
@@ -93,6 +98,20 @@ document.addEventListener("visibilitychange", () => {
   if (!document.hidden && inBlock) warn("Please stay on this tab until the block ends. Switching away is recorded and can make your answers unusable.");
 });
 const leaveGuard = e => { e.preventDefault(); e.returnValue = ""; };
+function unlockAudio() {                     // must run inside a tap: lets iPhones play these elements later
+  for (const a of Object.values(players)) {
+    a.muted = true;
+    const pr = a.play();
+    if (pr) pr.then(() => { a.pause(); a.currentTime = 0; a.muted = false; }).catch(() => { a.muted = false; });
+    else { a.pause(); a.muted = false; }
+  }
+  try { chimeCtx = chimeCtx || new (window.AudioContext || window.webkitAudioContext)(); chimeCtx.resume(); } catch (e) {}
+}
+let wakeLock = null;
+async function keepAwake() {                 // stop phones dimming and locking during the listening periods
+  try { if ("wakeLock" in navigator && !document.hidden) wakeLock = await navigator.wakeLock.request("screen"); } catch (e) {}
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden && wakeLock !== null) keepAwake(); });
 
 /* ---------- saved progress (survives reloads and closed tabs on this computer) ---------- */
 const STATE_KEY = "raga_state_v1", STATE_MAX_AGE_H = 6;
@@ -120,7 +139,7 @@ function resumePrompt(st) {
       <p class="muted">${st.finished ? "" : "Continuing restarts the block you were in, from its beginning."}</p>
       <button id="cont">${st.finished ? "Save my answers" : "Continue my session"}</button>
       <button id="fresh" class="secondary">Start over</button></div>`);
-    document.getElementById("cont").onclick = () => res(true);
+    document.getElementById("cont").onclick = () => { unlockAudio(); keepAwake(); res(true); };
     document.getElementById("fresh").onclick = () => res(false);
   });
 }
@@ -148,7 +167,7 @@ function mean(a) { return a.length ? a.reduce((x, y) => x + y, 0) / a.length : N
 function fmt(x, d = 0) { return Number.isFinite(x) ? x.toFixed(d) : "–"; }
 
 function log(r) {
-  rows.push({ participant: P.id, session_id: P.session, test_run: FAST ? 1 : 0, order_row: P.row + 1, order: P.order.join(""), order_source: P.orderSource, resumes: P.resumes, fam_carnatic: P.famC, fam_hindustani: P.famH, training_years: P.training,
+  rows.push({ participant: P.id, session_id: P.session, device: P.device, test_run: FAST ? 1 : 0, order_row: P.row + 1, order: P.order.join(""), order_source: P.orderSource, resumes: P.resumes, fam_carnatic: P.famC, fam_hindustani: P.famH, training_years: P.training,
               audio_ok: audioOK, timestamp: new Date().toISOString(), ...r });
 }
 
@@ -193,15 +212,9 @@ async function assignOrder() {             // next order in rotation from DataPi
 }
 let orderSource = "url";
 async function setup() {
-  const touchOnly = matchMedia("(pointer: coarse)").matches && !matchMedia("(pointer: fine)").matches;
-  if (touchOnly) {
-    show(`<div class="card"><h1>Please use a laptop or desktop</h1>
-      <p>This task needs a physical keyboard for typing digits. Open this link on a laptop or desktop computer with headphones.</p></div>`);
-    return new Promise(() => {});
-  }
   show(`<div class="card">
     <h1>Music and Memory Task</h1>
-    <p>About 18 minutes. You will do one short memory task five times, with different background music (or silence) each time. Use headphones, sit somewhere quiet, and keep this tab open and in front until the end.</p>
+    <p>About 18 minutes. You will do one short memory task five times, with different background music (or silence) each time. Works on a phone or a laptop. Use headphones, sit somewhere quiet, and keep this page open and in front until the end.</p>
     <p class="muted">Participation is voluntary and confidential. Your roll number is used only to link your sessions (for example if you need to continue later) and is removed before the data are analysed or shared. You can stop at any time by closing the page.</p>
     <label for="pid">Roll number</label>
     <input id="pid" type="text" inputmode="numeric" autocomplete="off" maxlength="15" placeholder="e.g. 2023102029">
@@ -219,7 +232,7 @@ async function setup() {
   const ready = () => start.disabled = !(hear.checked && document.getElementById("famC").value && document.getElementById("famH").value
                                         && /^[A-Za-z0-9-]{4,15}$/.test(pid.value.trim()));
   hear.onchange = ready; document.getElementById("famC").onchange = ready; document.getElementById("famH").onchange = ready; pid.oninput = ready;
-  await new Promise(res => start.onclick = res);
+  await new Promise(res => start.onclick = () => { unlockAudio(); res(); });
   const id = pid.value.trim();
   P = { id, famC: +document.getElementById("famC").value, famH: +document.getElementById("famH").value,
         training: Math.max(0, +document.getElementById("trn").value || 0),
@@ -228,6 +241,8 @@ async function setup() {
   P.orderSource = orderSource; P.resumes = 0;
   P.session = Math.random().toString(36).slice(2, 10);       // unique even if two students type the same ID
   P.seed = hash(id + P.session);
+  P.device = matchMedia("(pointer: coarse)").matches ? "touch" : "computer";
+  keepAwake();
   window.addEventListener("beforeunload", leaveGuard);
   for (const a of Object.values(players)) a.load();          // start downloading every track now
 }
@@ -261,27 +276,36 @@ async function presentDigits(d, label) {
 function recallInput(label) {
   return new Promise(res => {
     show(`<div class="stage">
-      <p class="muted">${label}</p>
-      <p>Type the ${RECALL_LEN} digits <b>in the order they appeared</b>.<br><span class="muted">Type <b>-</b> for any you don't remember. Backspace to correct.</span></p>
+      <p class="muted" style="margin:0">${label}</p>
+      <p style="margin:.4rem 0">Enter the ${RECALL_LEN} digits <b>in the order they appeared</b>.<br><span class="muted">Use <b>–</b> for any you don't remember. Tap the keys or type on a keyboard.</span></p>
       <div class="slots" id="slots">${Array(RECALL_LEN).fill("<span></span>").join("")}</div>
-      <input id="digitIn" type="text" inputmode="numeric" autocomplete="off" maxlength="${RECALL_LEN}">
-      <p class="muted" id="hint">Press Enter when all ${RECALL_LEN} are filled.</p></div>`);
-    const inp = document.getElementById("digitIn"), slots = [...document.getElementById("slots").children];
+      <div class="pad" id="pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button data-k="${n}">${n}</button>`).join("")}
+        <button data-k="-" aria-label="forgot this digit">–</button><button data-k="back" aria-label="delete">⌫</button><button data-k="done" class="done" disabled>Done</button></div>
+      <p class="muted" id="hint">Done (or Enter) when all ${RECALL_LEN} are filled.</p></div>`);
+    const slots = [...document.getElementById("slots").children], doneBtn = document.querySelector('#pad [data-k="done"]');
     const t0 = performance.now();
+    let v = "", used = new Set();
     const render = () => {
-      inp.value = inp.value.replace(/[^1-9-]/g, "").slice(0, RECALL_LEN);
-      slots.forEach((s, i) => { s.textContent = inp.value[i] || ""; s.classList.toggle("cur", i === inp.value.length); });
+      slots.forEach((sl, i) => { sl.textContent = v[i] === "-" ? "–" : (v[i] || ""); sl.classList.toggle("cur", i === v.length); });
+      doneBtn.disabled = v.length !== RECALL_LEN;
     };
-    inp.addEventListener("input", render);
-    inp.addEventListener("blur", () => setTimeout(() => inp.focus(), 0));
-    document.getElementById("slots").onclick = () => inp.focus();
-    inp.addEventListener("keydown", e => {
-      if (e.key !== "Enter") return;
-      e.preventDefault();
-      if (inp.value.length === RECALL_LEN) res({ v: inp.value, rt: performance.now() - t0 });
-      else document.getElementById("hint").innerHTML = `<b>Fill all ${RECALL_LEN} positions</b> (use - for ones you don't remember).`;
-    });
-    render(); inp.focus();
+    const press = (k, via) => {
+      used.add(via);
+      if (k === "back") v = v.slice(0, -1);
+      else if (k === "done") {
+        if (v.length === RECALL_LEN) { document.removeEventListener("keydown", onKey); res({ v, rt: performance.now() - t0, input: [...used].sort().join("+") }); return; }
+        document.getElementById("hint").innerHTML = `<b>Fill all ${RECALL_LEN} positions</b> (use – for ones you don't remember).`;
+      } else if (v.length < RECALL_LEN) v += k;
+      render();
+    };
+    const onKey = e => {
+      const k = e.key === "Enter" ? "done" : e.key === "Backspace" ? "back" : /^[1-9-]$/.test(e.key) ? e.key : null;
+      if (!k) return;
+      e.preventDefault(); if (!e.repeat || k === "back") press(k, "keyboard");
+    };
+    document.addEventListener("keydown", onKey);
+    document.getElementById("pad").onclick = e => { const b = e.target.closest("button"); if (b) press(b.dataset.k, "keypad"); };
+    render();
   });
 }
 async function runRecall(rng, ctx, feedback = false, n = RECALL_LISTS) {
@@ -299,7 +323,7 @@ async function runRecall(rng, ctx, feedback = false, n = RECALL_LISTS) {
       await sleep(2200);
     } else {
       log({ ...ctx, task: "recall", trial: i + 1, list_length: RECALL_LEN, stimulus: d.join(""), response: r.v,
-            n_correct_positions: hits, correct: hits === RECALL_LEN ? 1 : 0, rt_ms: r.rt.toFixed(0), tab_hidden_so_far: hiddenCount });
+            n_correct_positions: hits, correct: hits === RECALL_LEN ? 1 : 0, rt_ms: r.rt.toFixed(0), tab_hidden_so_far: hiddenCount, input: r.input });
       show(`<div class="stage"></div>`); await sleep(400);
     }
   }
@@ -330,7 +354,6 @@ function ratings(cond, baseline = false) {
     next.onclick = () => { next.disabled = true; res(vals); };
   });
 }
-let chimeCtx = null;
 function chime() {                          // soft two-note chime; the page already had a click, so audio is allowed
   try {
     chimeCtx = chimeCtx || new (window.AudioContext || window.webkitAudioContext)();
@@ -500,7 +523,7 @@ async function runBaseline() {               // one "right now" alertness/mood r
   if (!S.practiceDone) {
     await screen(`<h2>The task: number lists</h2>
       <p>${RECALL_LEN} digits appear one at a time. Then type them back <b>in the same order</b>.</p>
-      <p>Each list uses all the digits 1–9 once, in a random order. Example: you see 4, 9, 2, … → you type 4 9 2 …. If you forget one, type <b>-</b> in its place so the others stay in the right position.</p>
+      <p>Each list uses all the digits 1–9 once, in a random order. Example: you see 4, 9, 2, … → you enter 4 9 2 …. If you forget one, enter <b>–</b> in its place so the others stay in the right position. Tap the on-screen keys, or type on a keyboard.</p>
       <p class="muted">There is no time limit for typing; the music simply keeps playing until you finish. It is meant to be hard; most people get about half to two-thirds right. Two practice lists first, without music.</p>`, "Try the practice lists");
     await runRecall(mulberry32(1), {}, true, 2);
     S.practiceDone = true; saveState();
