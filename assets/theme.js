@@ -1,5 +1,5 @@
-/* Theme choice (system / light / dark), shared by index.html and test.html.
-   Load it in <head> after theme.css so the page never flashes the wrong colours.
+/* Theme choice (system / light / dark), shared by every page.
+   Load it in <head> after tokens.css and theme.css so the page never flashes the wrong colours.
    "system" (the default) follows the device setting, including changes while the page is open. */
 (function () {
   "use strict";
@@ -33,5 +33,17 @@
     if (mq.addEventListener) mq.addEventListener("change", follow); else if (mq.addListener) mq.addListener(follow);
   }
   apply(get());
+
+  // Any theme switch on the page (see theme.css) works without page code:
+  // <div class="theme-switch" role="group" aria-label="Theme"><button type="button" data-theme-choice="light">Light</button>…</div>
+  function wireSwitches() {
+    var btns = [].slice.call(document.querySelectorAll(".theme-switch [data-theme-choice]"));
+    if (!btns.length) return;
+    var mark = function () { var c = get(); btns.forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute("data-theme-choice") === c)); }); };
+    btns.forEach(function (b) { b.addEventListener("click", function () { set(b.getAttribute("data-theme-choice")); }); });
+    onChange(mark); mark();
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", wireSwitches); else wireSwitches();
+
   window.Theme = { KEY: KEY, CHOICES: CHOICES, get: get, set: set, resolved: resolved, onChange: onChange };
 })();

@@ -2,9 +2,10 @@
   "name": "raga-experiment",
   "version": "1.0.0",
   "private": true,
-  "description": "Music and Memory Task: static experiment site plus its browser tests",
+  "description": "Music and Memory Task: static experiment site, its design tokens and its browser tests",
   "scripts": {
     "serve": "node tests/server.js",
+    "tokens": "node tools/build-tokens.js",
     "test": "playwright test",
     "test:desktop": "playwright test --project=desktop --project=laptop",
     "test:tablet": "playwright test --project=ipad --project=ipad-landscape",

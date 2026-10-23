@@ -2,7 +2,7 @@
 
 Static page, no install. Open `index.html` in Chrome or Edge, or host the folder (GitHub Pages, any shared drive web server). Audio autoplay needs a click first, and the page always has one. Works on phones, tablets (iPad), laptops and desktops, in a light or dark theme.
 
-The site itself is `index.html` (the task), `test.html` (stimulus check), `assets/` (shared theme colours and theme switching) and `stimuli/`. Everything else (`tests/`, `package.json`, `playwright.config.js`) is only for testing and is not needed to run the task.
+The site itself is `index.html` (the task), `test.html` (stimulus check), `template.html` (starter page for new pages), `assets/` (design tokens, shared styles and theme switching) and `stimuli/`. Everything else (`tests/`, `tools/`, `package.json`, `playwright.config.js`) is only for testing and building and is not needed to run the task.
 
 ## Stimuli
 Raga Shankarabharanam (S R2 G3 M1 P D2 N3: exactly the Western major scale; Bilawal in Hindustani music), Adi talam, Sa = Eb. Built from real recorded samples by `make_stimuli.py`:
@@ -38,9 +38,28 @@ python make_stimuli.py --assets ASSETS --fluidsynth PATH/fluidsynth.exe --gm PAT
 
 **Progress bar.** The bar at the top appears only on the first page of each phase, with its name and how much of the whole session is done: Intro, Setup (theme), Practice, Questions before the task (baseline rating), About the task (before the blocks and at the start of each block), Questions after each block, Finished. It is hidden on every other page (volume, lists, answers, lead-in, rests), so nothing distracts during the task. It only goes up; a resumed session continues from the progress it had reached.
 
-**Theme and colours.** One simple palette (neutral greys with an indigo accent) in a light and a dark version, defined once in `assets/theme.css`; all text meets WCAG AA contrast in both. `assets/theme.js` applies the choice before the page draws (no flash) and follows the device live when System is chosen. The resume page also leads through the theme page, with the saved choice selected.
+**Theme and colours.** A calm palette (warm stone neutrals, one muted teal accent, serif headings) in a light and a dark version, from the design system below; all text meets WCAG AA contrast in both. `assets/theme.js` applies the choice before the page draws (no flash) and follows the device live when System is chosen. The resume page also leads through the theme page, with the saved choice selected.
 
 About 18 minutes in total. Leaving the page mid-session triggers a "leave site?" prompt; switching tabs during a block shows a warning on return and is recorded (`tab_hidden_count`, and `tab_hidden_so_far` per list).
+
+## Design system
+Every page gets its look from three files, loaded in this order in `<head>`:
+
+```
+<link rel="stylesheet" href="assets/tokens.css">
+<link rel="stylesheet" href="assets/theme.css">
+<script src="assets/theme.js"></script>
+```
+
+| File | What it is |
+|---|---|
+| `assets/tokens.json` | **The source.** Colours (a `light` and a `dark` set with the same names), fonts, type sizes, spacing, radii and motion, in the W3C Design Tokens (DTCG) format, so it imports into Tokens Studio for Figma, Style Dictionary and other token tools |
+| `assets/tokens.css` | Generated from `tokens.json` by `npm run tokens` (`tools/build-tokens.js`, no dependencies). Never edit by hand; a test fails if it is out of date |
+| `assets/theme.css` | Shared styles built only from the tokens: headings, text, cards, buttons (`.secondary` for outlined), fields, Yes/No choice (`.seg`), notices (`.warn`), tables, progress bar, theme switch (`.theme-switch`) |
+| `assets/theme.js` | System / Light / Dark choice, remembered across pages; wires up any `.theme-switch` on the page |
+| `template.html` | Starter page and component sheet: copy it to make a new page. Shows every component and every colour token in both themes |
+
+To restyle every page at once, edit `assets/tokens.json` and run `npm run tokens`. Pages add only their own layout and never hard-code a colour (the tests check this). The classes `.theme-light` and `.theme-dark` give a single element that palette whatever the page shows (used for the theme swatches).
 
 ## URL options
 - `?fast=1` shortens lead-in and rest (3 s and 2 s) for piloting.
@@ -68,6 +87,8 @@ Browser tests (Playwright) check every feature on six device profiles: desktop (
 ```
 npm ci
 npx playwright install chromium     # add webkit for the Safari-engine projects (PW_WEBKIT=1)
+npm run serve                       # the site at http://127.0.0.1:4173/ (try index.html?nosave=1&fast=1: nothing uploads)
+npm run tokens                      # rebuild assets/tokens.css after editing assets/tokens.json
 npm test                            # everything, all devices
 npm run test:desktop                # desktop + laptop
 npm run test:tablet                 # iPad portrait + landscape
@@ -83,6 +104,7 @@ npm run test:smoke                  # quick checks; BASE_URL=https://... runs th
 | `tests/theme.spec.js` | System/Light/Dark, following the device live, remembered across pages, switcher on `test.html`, colour contrast in both themes |
 | `tests/progress.spec.js` | Bar only on the first page of each phase, correct labels, only increases, resumed sessions |
 | `tests/responsive.spec.js` | No sideways scrolling, touch targets ≥ 44 px, inputs ≥ 16 px (no iPhone zoom), keypad fits the screen |
+| `tests/design.spec.js` | `tokens.css` matches `tokens.json`; light and dark name the same colours; no hard-coded colours in the pages; template page components, colour table and theme switch; theme swatches show their own palette |
 | `tests/smoke.spec.js` | Pages, theme files and music files load (with `BASE_URL`, also against the live site) |
 
 ## Publishing

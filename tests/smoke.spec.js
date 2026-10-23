@@ -18,6 +18,13 @@ test("@smoke intro leads to the theme page", async ({ page }, testInfo) => {
   page.on("dialog", d => d.accept());
 });
 
+test("@smoke template page loads with the design files", async ({ page, request }) => {
+  await page.goto("template.html");
+  await expect(page.getByRole("heading", { name: "Page template" })).toBeVisible();
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--heading").trim())).not.toBe("");
+  expect((await request.get("assets/tokens.json")).status(), "tokens.json").toBe(200);
+});
+
 test("@smoke stimulus check page and all four music files are served", async ({ page, request }) => {
   await page.goto("test.html");
   await expect(page.getByRole("heading", { name: "Stimulus check" })).toBeVisible();

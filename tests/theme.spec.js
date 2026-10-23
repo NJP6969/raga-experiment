@@ -1,7 +1,7 @@
 // Theme: System (default, follows the device), Light or Dark; one simple colour scheme for each.
 const { test, expect, TASK } = require("./helpers");
 
-const TOKENS = ["bg", "card", "fg", "muted", "line-strong", "accent", "accent-fg", "accent-soft", "ok", "bad", "warn-bg", "warn-fg"];
+const TOKENS = ["bg", "card", "fg", "heading", "muted", "line-strong", "accent", "accent-hover", "accent-fg", "accent-soft", "ok", "bad", "warn-bg", "warn-fg"];
 const rgb = c => c.startsWith("#") ? [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16)) : c.match(/\d+(\.\d+)?/g).slice(0, 3).map(Number);
 const lum = c => { const [r, g, b] = rgb(c).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
 const contrast = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
@@ -70,9 +70,11 @@ test.describe("theme", () => {
       await page.evaluate(x => Theme.set(x), t);
       const c = await tokens(page);
       for (const [fg, bg] of [["fg", "bg"], ["fg", "card"], ["muted", "bg"], ["muted", "card"], ["accent-fg", "accent"], ["accent", "card"],
-                              ["ok", "card"], ["bad", "card"], ["warn-fg", "warn-bg"], ["fg", "accent-soft"]])
+                              ["ok", "card"], ["bad", "card"], ["warn-fg", "warn-bg"], ["fg", "accent-soft"],
+                              ["heading", "bg"], ["heading", "card"], ["accent-fg", "accent-hover"]])
         expect(contrast(c[fg], c[bg]), `${fg} on ${bg}`).toBeGreaterThanOrEqual(4.5);
       expect(contrast(c["line-strong"], c.card), "input borders").toBeGreaterThanOrEqual(3);
+      expect(contrast(c["line-strong"], c.bg), "key borders on the page background").toBeGreaterThanOrEqual(3);
       expect(t === "dark" ? lum(c.bg) < 0.05 : lum(c.bg) > 0.85).toBe(true);
     });
   }

@@ -1,36 +1,99 @@
-/* Colour scheme shared by index.html and test.html.
-   One neutral palette with a single indigo accent, in a light and a dark version.
-   The theme follows the device ("system") until the participant picks Light or Dark,
-   which theme.js stores and applies as <html data-theme="light|dark">. */
-:root {
-  color-scheme: light;
-  --bg: #f5f6f8;          /* page */
-  --card: #ffffff;        /* cards, inputs */
-  --fg: #1c1f24;          /* text */
-  --muted: #5b6470;       /* secondary text */
-  --line: #d5dae1;        /* dividers, card borders */
-  --line-strong: #8b939e; /* input and key borders */
-  --accent: #3b55c9;      /* buttons, selection, progress */
-  --accent-fg: #ffffff;   /* text on accent */
-  --accent-soft: #e9edfb; /* hover and pressed keys */
-  --ok: #1e7a3c;
-  --bad: #c0352b;
-  --warn-bg: #fff6dc;
-  --warn-fg: #5c4300;
-  --warn-line: #e8cf87;
-  --track: #e3e6eb;       /* empty part of bars */
+/* Base styles shared by every page: index.html (the task), test.html (stimulus check) and
+   template.html (starter page and component sheet). Load tokens.css first: every colour, size,
+   radius and shadow here comes from it, so changing tokens.json restyles all pages at once.
+   Pages add only their own layout. Button styles use :where() (no specificity), so any page rule
+   such as `.pad button { … }` overrides them without fighting. */
+
+/* ---------- page and text ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: var(--text-body); line-height: var(--leading-body);
+  -webkit-font-smoothing: antialiased;
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --bg: #121418; --card: #1b1e24; --fg: #e7e9ee; --muted: #9ba3ae; --line: #30353d; --line-strong: #6b7480;
-    --accent: #8fa3ff; --accent-fg: #0f1530; --accent-soft: #232a46; --ok: #6fcf8d; --bad: #f28b82;
-    --warn-bg: #33290a; --warn-fg: #f1d27c; --warn-line: #5e4c17; --track: #2a2e36;
-  }
+h1, h2, h3 {
+  margin: 0 0 var(--space-3); color: var(--heading);
+  font-family: var(--font-heading); font-weight: var(--weight-heading);
+  line-height: var(--leading-heading); letter-spacing: -0.005em; text-wrap: balance;
 }
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --bg: #121418; --card: #1b1e24; --fg: #e7e9ee; --muted: #9ba3ae; --line: #30353d; --line-strong: #6b7480;
-  --accent: #8fa3ff; --accent-fg: #0f1530; --accent-soft: #232a46; --ok: #6fcf8d; --bad: #f28b82;
-  --warn-bg: #33290a; --warn-fg: #f1d27c; --warn-line: #5e4c17; --track: #2a2e36;
+h1 { font-size: var(--text-h1); }
+h2 { font-size: var(--text-h2); }
+h3 { font-size: var(--text-h3); margin-bottom: var(--space-2); }
+@media (max-width: 480px) { h1 { font-size: calc(var(--text-h1) * .88); } }
+p { margin: var(--space-2) 0 var(--space-4); }
+a { color: var(--accent); text-underline-offset: 2px; }
+.muted { color: var(--muted); font-size: var(--text-sm); }
+.eyebrow {                                   /* small label above a heading, e.g. a step or section name */
+  margin: 0 0 var(--space-1); color: var(--accent);
+  font-size: var(--text-xs); font-weight: var(--weight-strong); letter-spacing: .08em; text-transform: uppercase;
 }
+.ok { color: var(--ok); }
+.bad { color: var(--bad); }
+code, pre { font-family: var(--font-mono); font-size: .88em; }
+pre {
+  margin: var(--space-3) 0; padding: var(--space-3) var(--space-4); overflow-x: auto; line-height: 1.5;
+  background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-md);
+}
+
+/* ---------- surfaces ---------- */
+.card {
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-lg);
+  padding: var(--space-5); box-shadow: var(--shadow-card);
+}
+@media (min-width: 560px) { .card { padding: var(--space-6); } }
+.warn {                                      /* notice */
+  background: var(--warn-bg); color: var(--warn-fg); border: 1px solid var(--warn-line);
+  border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: var(--space-4); font-size: var(--text-sm);
+}
+table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); margin: var(--space-3) 0; }
+th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); }
+th { color: var(--muted); font-weight: var(--weight-strong); }
+.bar { height: 6px; background: var(--track); border-radius: var(--radius-pill); overflow: hidden; }   /* progress */
+.bar > div { height: 100%; background: var(--accent); border-radius: inherit; }
+
+/* ---------- focus ---------- */
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- buttons: filled by default, .secondary is outlined ---------- */
+:where(button) {
+  margin: 0; padding: 10px 20px; font: inherit; font-weight: var(--weight-strong); cursor: pointer;
+  border: 1px solid var(--accent); border-radius: var(--radius-md); background: var(--accent); color: var(--accent-fg);
+  transition: background-color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard);
+}
+:where(button.secondary) { background: transparent; color: var(--accent); }
+@media (hover: hover) {
+  :where(button:hover:not(:disabled)) { background: var(--accent-hover); border-color: var(--accent-hover); }
+  :where(button.secondary:hover:not(:disabled)) { background: var(--accent-soft); border-color: var(--accent); }
+}
+:where(button:disabled) { opacity: .4; cursor: not-allowed; }
+
+/* ---------- form fields ---------- */
+label { display: block; margin: 14px 0 4px; font-weight: var(--weight-strong); }
+input[type=text], input[type=number], input[type=email], input[type=search], select, textarea {
+  width: 100%; padding: 10px 12px; font: inherit; color: var(--fg); background: var(--card);
+  border: 1px solid var(--line-strong); border-radius: var(--radius-md);
+}
+input::placeholder, textarea::placeholder { color: var(--muted); }
+input[type=checkbox], input[type=radio], input[type=range] { accent-color: var(--accent); }
+.field-msg { margin: 4px 0 0; font-size: .85rem; color: var(--muted); min-height: 1.25em; }   /* hint or error under a field */
+.field-msg.err { color: var(--bad); }
+
+/* Segmented choice (radio buttons that look like buttons):
+   <fieldset class="choice"><legend>…</legend><div class="seg"><label><input type="radio" name="x"><span>Yes</span></label>…</div></fieldset> */
+fieldset.choice { border: 0; padding: 0; margin: 14px 0 0; min-width: 0; }
+fieldset.choice legend { font-weight: var(--weight-strong); padding: 0; margin-bottom: 6px; }
+.seg { display: flex; gap: var(--space-2); }
+.seg label { flex: 1; margin: 0; position: relative; font-weight: var(--weight-regular); }
+.seg input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.seg span { display: block; text-align: center; padding: 10px; border: 1px solid var(--line-strong); border-radius: var(--radius-md); background: var(--card); }
+.seg input:checked + span { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: var(--weight-strong); }
+.seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Theme switch; theme.js wires it up and marks the active choice:
+   <div class="theme-switch" role="group" aria-label="Theme"><button type="button" data-theme-choice="system">System</button>…</div> */
+.theme-switch { display: inline-flex; border: 1px solid var(--line-strong); border-radius: var(--radius-md); overflow: hidden; background: var(--card); }
+.theme-switch button { margin: 0; border: 0; border-radius: 0; padding: 6px 12px; font-size: .85rem; font-weight: var(--weight-regular); background: transparent; color: var(--fg); transition: none; }
+.theme-switch button + button { border-left: 1px solid var(--line-strong); }
+.theme-switch button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); font-weight: var(--weight-strong); }
+@media (hover: hover) { .theme-switch button[aria-pressed="false"]:hover { background: var(--accent-soft); } }
