@@ -26,14 +26,14 @@ python make_stimuli.py --assets ASSETS --fluidsynth PATH/fluidsynth.exe --gm PAT
 ```
 
 ## Flow
-1. Start screen (ID, Carnatic and Hindustani familiarity, training, hearing check). Phones and tablets are told to use a laptop (typing digits needs a keyboard).
+1. Start screen (roll number, required; Carnatic and Hindustani familiarity, training, hearing check). Roll numbers link a student's sessions and must be removed before data are shared. Phones and tablets are told to use a laptop (typing digits needs a keyboard).
 2. Order assignment: one of 10 Williams-design orders of the 5 conditions (each condition appears in each position twice and directly follows every other condition twice). Taken in rotation from DataPipe's condition counter when it is switched on (set it to 10 conditions); otherwise random. Recorded as `order_row`, `order`, `order_source`.
 3. Volume check with a music sample. All four tracks start downloading here; each block waits until its track can play through.
-4. Practice without music: 2 serial-recall lists with feedback.
-5. Five blocks. Each block: 30 s listening → "Numbers" cue → **serial recall**, 8 lists of 8 digits (8 of the digits 1–9, no repeats, no runs like 3-4-5; 0.75 s on, 0.25 s off; type them back in order, `-` for forgotten ones, all 8 positions required) → ratings (alertness, mood, and "how Indian" for music blocks) → 20 s rest. Music plays from the start of the block through the lists.
+4. Practice without music: 2 serial-recall lists with feedback, then one baseline "right now" alertness and mood rating (logged as block 0, condition `baseline`).
+5. Five blocks. Each block: 30 s listening → "Numbers" cue → **serial recall**, 8 lists of 9 digits (all of 1–9 in random order, no runs like 3-4-5; 0.75 s on, 0.25 s off; "List k of 8" shown; type them back in order, `-` for forgotten ones, all 9 positions required, no time limit) → ratings, every point labelled ("during this block" alertness and mood, and "how Indian" for music blocks) → 20 s rest ending with a soft chime. Music plays from the start of the block through the lists.
 6. Results table and upload.
 
-About 17 minutes in total. Leaving the page mid-session triggers a "leave site?" prompt; how often the tab was hidden during each block is recorded (`tab_hidden_count`).
+About 18 minutes in total. Leaving the page mid-session triggers a "leave site?" prompt; switching tabs during a block shows a warning on return and is recorded (`tab_hidden_count`, and `tab_hidden_so_far` per list).
 
 ## URL options
 - `?fast=1` shortens lead-in and rest (3 s and 2 s) for piloting.

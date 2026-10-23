@@ -9,14 +9,14 @@ Steps (in this order, all reported in results/summary.txt):
  1. File selection, per session_id: the final <ID>_<session>_trials.csv if present, otherwise the
     highest-numbered <ID>_<session>_progress_b<N>[_r<K>].csv (most completed blocks).
  2. Exclusions:
-    a. test runs (test_run == 1);
+    a. test runs (test_run == 1) and pilot sessions from earlier task versions (list length != 9);
     b. music blocks where audio failed (audio_ok false) are dropped;
     c. if one participant ID has several sessions (e.g. "Start over"), keep the session with the
        most completed recall lists (earliest if tied), unless --keep-duplicate-ids;
     d. participants whose overall recall is below 0.20 (near chance for 8 of 9 digits ~ 0.11),
-       treated as not doing the task.
- 3. Outcome: each digit scored 1 if recalled in its correct serial position (8 per list,
-    8 lists per block), recomputed from stimulus and response.
+       treated as not doing the task. Baseline ratings (block 0) are kept out of all models.
+ 3. Outcome: each digit scored 1 if recalled in its correct serial position (9 per list, all of
+    1-9; 8 lists per block), recomputed from stimulus and response.
  4. Models: logistic GEE at the digit level, clustered by participant (exchangeable working
     correlation, robust SEs), effect-coded predictors, block position as a centred covariate.
       H1  quiet vs music:            correct ~ music + pos_c                       (all blocks)
@@ -38,6 +38,7 @@ import statsmodels.formula.api as smf
 
 FILE_RE = re.compile(r"^(?P<base>.+?)_(?P<kind>trials|blocks|progress_b(?P<n>\d+)(?:_r(?P<r>\d+))?)\.csv$")
 MIN_OVERALL = 0.20
+LIST_LEN = 9          # the registered task; earlier pilot versions used 8
 
 
 def select_files(data_dir, log):
@@ -110,6 +111,10 @@ def main():
     d = raw[raw["test_run"].astype(str).isin(["0", "0.0", "False", "false"])].copy()
     log(f"Excluded test runs: {n0 - d['session_id'].nunique()} sessions")
     rec = d[d["task"] == "recall"].copy()
+    old = rec["list_length"].astype(float) != LIST_LEN
+    if old.any():
+        log(f"Excluded sessions run with an earlier task version (list length != {LIST_LEN}, i.e. pilots): {rec.loc[old, 'session_id'].nunique()}")
+    rec = rec[~old]
     bad_audio = rec["audio_ok"].astype(str).str.lower().isin(["false", "0"]) & (rec["style"] != "quiet")
     log(f"Excluded music blocks with failed audio: {rec[bad_audio].groupby(['session_id', 'block_position']).ngroups}")
     rec = rec[~bad_audio]
@@ -122,6 +127,9 @@ def main():
             log(f"Duplicate participant IDs: kept the most complete session, dropped {len(dropped)}: {sorted(dropped)}")
         rec = rec[rec["session_id"].isin(keep)]
     dig = digit_level(rec)
+    if dig.empty:
+        log("\nFINAL SAMPLE: 0 participants (nothing left after exclusions).")
+        open(os.path.join(a.out, "summary.txt"), "w", encoding="utf8").write("\n".join(lines) + "\n"); return
     overall = dig.groupby("session_id")["correct"].mean()
     low = overall[overall < MIN_OVERALL].index
     log(f"Excluded participants with overall recall < {MIN_OVERALL}: {len(low)}")

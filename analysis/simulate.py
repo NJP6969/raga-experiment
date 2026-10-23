@@ -17,7 +17,7 @@ import pandas as pd
 
 ORDERS = ["ABECD", "BCADE", "CDBEA", "DECAB", "EADBC", "DCEBA", "EDACB", "AEBDC", "BACED", "CBDAE"]
 COND = {"A": ("raga", "slow"), "B": ("raga", "fast"), "C": ("western", "slow"), "D": ("western", "fast"), "E": ("quiet", "none")}
-POS_CURVE = np.array([0.9, 0.5, 0.1, -0.2, -0.4, -0.5, -0.4, 0.1])     # primacy and a small recency bump
+POS_CURVE = np.array([0.9, 0.5, 0.1, -0.2, -0.4, -0.5, -0.5, -0.3, 0.1])   # primacy and a small recency bump (9 positions)
 
 
 def session(pid, sid, row, rng, eff, fam, base, blocks=5, test=0, resume_at=None):
@@ -33,14 +33,14 @@ def session(pid, sid, row, rng, eff, fam, base, blocks=5, test=0, resume_at=None
             logit += s * (eff["style"] + eff["style_fam"] * famz) + (0.5 if tempo == "fast" else -0.5) * eff["tempo"]
         resumes = 1 if resume_at is not None and b >= resume_at else 0
         for k in range(8):
-            stim = rng.sample(range(1, 10), 8)
+            stim = rng.sample(range(1, 10), 9)
             resp = [str(x) if rng.random() < 1 / (1 + np.exp(-(logit + POS_CURVE[i]))) else "-" for i, x in enumerate(stim)]
             hits = sum(r == str(x) for r, x in zip(resp, stim))
             rows.append(dict(participant=pid, session_id=sid, test_run=test, order_row=row + 1, order=order, order_source="datapipe",
                              resumes=resumes, fam_carnatic=fam, fam_hindustani=2, training_years=0, audio_ok=True,
                              timestamp=f"2026-11-01T10:{b:02d}:{k:02d}Z", block_position=b + 1, condition=cond, style=style,
-                             tempo=tempo, task="recall", trial=k + 1, list_length=8, stimulus="".join(map(str, stim)),
-                             response="".join(resp), n_correct_positions=hits, correct=int(hits == 8), rt_ms=6000, tab_hidden_so_far=0))
+                             tempo=tempo, task="recall", trial=k + 1, list_length=9, stimulus="".join(map(str, stim)),
+                             response="".join(resp), n_correct_positions=hits, correct=int(hits == 9), rt_ms=6000, tab_hidden_so_far=0))
         ratings = [("alertness", 3), ("mood", 3)] + ([("indian", 4 if style == "raga" else 2)] if style != "quiet" else [])
         for name, v in ratings:
             rows.append(dict(participant=pid, session_id=sid, test_run=test, order_row=row + 1, order=order, order_source="datapipe",

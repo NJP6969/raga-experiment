@@ -27,7 +27,9 @@
   .fix { font-size:4rem; color:var(--muted); line-height:1; }
   .cue { font-size:1.6rem; font-weight:600; }
   .scale { display:flex; gap:8px; margin:6px 0 4px; }
-  .scale button { margin:0; flex:1; background:transparent; color:var(--fg); border-color:var(--line); padding:12px 0; }
+  .scale button { margin:0; flex:1; background:transparent; color:var(--fg); border-color:var(--line); padding:8px 2px; display:flex; flex-direction:column; align-items:center; gap:2px; line-height:1.2; }
+  .scale button span { font-size:.72rem; color:var(--muted); }
+  .scale button.on span { color:var(--accent-fg); }
   .scale button.on { background:var(--accent); color:var(--accent-fg); border-color:var(--accent); }
   .ends { display:flex; justify-content:space-between; font-size:.85rem; color:var(--muted); }
   .bar { height:6px; background:var(--line); border-radius:3px; margin-bottom:24px; }
@@ -59,7 +61,7 @@ const SAVE = !Q.has("nosave");              // ?nosave=1 runs without uploading 
 const DATAPIPE_ID = "hmU1FxSIMrPB";         // DataPipe experiment; files land in its Google Drive folder
 const LEAD_IN_S = FAST ? 3 : 30;
 const REST_S = FAST ? 2 : 20;
-const RECALL_LEN = 8, RECALL_LISTS = 8;     // serial recall: 8 lists of 8 digits per block
+const RECALL_LEN = 9, RECALL_LISTS = 8;     // serial recall: 8 lists of 9 digits per block (all of 1-9, random order)
 
 const CONDITIONS = {
   A: { label: "Indian style, slow",  style: "raga",    tempo: "slow", file: "stimuli/A_raga_slow.mp3" },
@@ -86,12 +88,15 @@ for (const [k, c] of Object.entries(CONDITIONS)) {
   players[k] = a;
 }
 let current = null;
-document.addEventListener("visibilitychange", () => { if (document.hidden && inBlock) hiddenCount++; });
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && inBlock) hiddenCount++;
+  if (!document.hidden && inBlock) warn("Please stay on this tab until the block ends. Switching away is recorded and can make your answers unusable.");
+});
 const leaveGuard = e => { e.preventDefault(); e.returnValue = ""; };
 
 /* ---------- saved progress (survives reloads and closed tabs on this computer) ---------- */
 const STATE_KEY = "raga_state_v1", STATE_MAX_AGE_H = 6;
-const S = { nextBlock: 0, practiceDone: false, finished: false };
+const S = { nextBlock: 0, practiceDone: false, baselineDone: false, finished: false };
 function saveState() {
   try {
     localStorage.setItem(STATE_KEY, JSON.stringify({ ...S, savedAt: Date.now(), fast: FAST, P, rows, blockSummaries }));
@@ -196,10 +201,10 @@ async function setup() {
   }
   show(`<div class="card">
     <h1>Music and Memory Task</h1>
-    <p>About 17 minutes. You will do one short memory task five times, with different background music (or silence) each time. Use headphones, sit somewhere quiet, and keep this tab open and in front until the end.</p>
-    <p class="muted">Participation is voluntary and anonymous. You can stop at any time by closing the page. Your answers are saved for the class study when you finish.</p>
-    <label for="pid">Participant ID</label>
-    <input id="pid" type="text" value="${Math.random().toString(36).slice(2, 6).toUpperCase()}" maxlength="12">
+    <p>About 18 minutes. You will do one short memory task five times, with different background music (or silence) each time. Use headphones, sit somewhere quiet, and keep this tab open and in front until the end.</p>
+    <p class="muted">Participation is voluntary and confidential. Your roll number is used only to link your sessions (for example if you need to continue later) and is removed before the data are analysed or shared. You can stop at any time by closing the page.</p>
+    <label for="pid">Roll number</label>
+    <input id="pid" type="text" inputmode="numeric" autocomplete="off" maxlength="15" placeholder="e.g. 2023102029">
     <label for="famC">How familiar are you with Carnatic (South Indian classical) music?</label>
     <select id="famC"><option value="" selected disabled>choose 1–5</option><option value="1">1 – not at all</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5 – very familiar</option></select>
     <label for="famH">How familiar are you with Hindustani (North Indian classical) music?</label>
@@ -210,10 +215,12 @@ async function setup() {
     <button id="start" disabled>Begin</button>
   </div>`);
   const hear = document.getElementById("hear"), start = document.getElementById("start");
-  const ready = () => start.disabled = !(hear.checked && document.getElementById("famC").value && document.getElementById("famH").value);
-  hear.onchange = ready; document.getElementById("famC").onchange = ready; document.getElementById("famH").onchange = ready;
+  const pid = document.getElementById("pid");
+  const ready = () => start.disabled = !(hear.checked && document.getElementById("famC").value && document.getElementById("famH").value
+                                        && /^[A-Za-z0-9-]{4,15}$/.test(pid.value.trim()));
+  hear.onchange = ready; document.getElementById("famC").onchange = ready; document.getElementById("famH").onchange = ready; pid.oninput = ready;
   await new Promise(res => start.onclick = res);
-  const id = document.getElementById("pid").value.trim() || "anon";
+  const id = pid.value.trim();
   P = { id, famC: +document.getElementById("famC").value, famH: +document.getElementById("famH").value,
         training: Math.max(0, +document.getElementById("trn").value || 0),
         row: Q.has("row") ? (+Q.get("row") - 1) % ORDERS.length : await assignOrder() };
@@ -238,22 +245,23 @@ async function volumeCheck() {
 
 /* ---------- serial recall (8 digits, forward order) ---------- */
 function makeList(rng) {
-  for (;;) {                                                 // 8 of the digits 1-9, no runs like 3-4-5 or 7-6-5
+  for (;;) {                                                 // the digits 1-9 in random order, no runs like 3-4-5 or 7-6-5
     const d = shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9], rng).slice(0, RECALL_LEN);
     const run = d.some((x, i) => i > 1 && x - d[i - 1] === d[i - 1] - d[i - 2] && Math.abs(x - d[i - 1]) === 1);
     if (!run) return d;
   }
 }
-async function presentDigits(d) {
-  show(`<div class="stage"><div class="fix">+</div></div>`); await sleep(500);
+async function presentDigits(d, label) {
+  show(`<div class="stage"><div class="fix">+</div><p class="muted">${label}</p></div>`); await sleep(700);
   for (const x of d) {
     show(`<div class="stage"><div class="big">${x}</div></div>`); await sleep(750);
     show(`<div class="stage"></div>`); await sleep(250);
   }
 }
-function recallInput() {
+function recallInput(label) {
   return new Promise(res => {
     show(`<div class="stage">
+      <p class="muted">${label}</p>
       <p>Type the ${RECALL_LEN} digits <b>in the order they appeared</b>.<br><span class="muted">Type <b>-</b> for any you don't remember. Backspace to correct.</span></p>
       <div class="slots" id="slots">${Array(RECALL_LEN).fill("<span></span>").join("")}</div>
       <input id="digitIn" type="text" inputmode="numeric" autocomplete="off" maxlength="${RECALL_LEN}">
@@ -280,13 +288,14 @@ async function runRecall(rng, ctx, feedback = false, n = RECALL_LISTS) {
   let correctPos = 0, perfect = 0;
   for (let i = 0; i < n; i++) {
     const d = makeList(rng);
-    await presentDigits(d);
-    const r = await recallInput();
+    const label = feedback ? `Practice list ${i + 1} of ${n}` : `List ${i + 1} of ${n}`;
+    await presentDigits(d, label);
+    const r = await recallInput(label);
     const hits = d.reduce((s, x, k) => s + (r.v[k] === String(x) ? 1 : 0), 0);
     correctPos += hits; perfect += hits === RECALL_LEN ? 1 : 0;
     if (feedback) {
       show(`<div class="stage"><p>The list was</p><div class="seq">${d.join("")}</div>
-        <p class="cue ${hits >= 6 ? "ok" : ""}" style="margin-top:16px">${hits} of ${RECALL_LEN} in the right place</p></div>`);
+        <p class="cue ${hits >= 7 ? "ok" : ""}" style="margin-top:16px">${hits} of ${RECALL_LEN} in the right place</p></div>`);
       await sleep(2200);
     } else {
       log({ ...ctx, task: "recall", trial: i + 1, list_length: RECALL_LEN, stimulus: d.join(""), response: r.v,
@@ -298,29 +307,49 @@ async function runRecall(rng, ctx, feedback = false, n = RECALL_LISTS) {
 }
 
 /* ---------- ratings, rest, cues ---------- */
-function ratings(cond) {
+const SCALES = {
+  alertness: ["During this block, how alert did you feel?", ["Very sleepy", "Somewhat sleepy", "Neither", "Somewhat alert", "Very alert"]],
+  mood:      ["During this block, how was your mood?",       ["Very bad", "Bad", "Neutral", "Good", "Very good"]],
+  indian:    ["How Indian did the music sound?",             ["Not at all", "Slightly", "Moderately", "Quite", "Very Indian"]]
+};
+function ratings(cond, baseline = false) {
   return new Promise(res => {
-    const items = [["alertness", "How alert did you feel?", "very sleepy", "very alert"],
-                   ["mood", "How was your mood?", "very low", "very good"]];
-    if (CONDITIONS[cond].file) items.push(["indian", "How Indian did the music sound?", "not at all", "very"]);
+    const keys = baseline ? ["alertness", "mood"] : ["alertness", "mood"].concat(CONDITIONS[cond].file ? ["indian"] : []);
+    const q = k => baseline ? SCALES[k][0].replace("During this block, how", "Right now, how").replace("did you feel", "do you feel").replace("was your mood", "is your mood") : SCALES[k][0];
     const vals = {};
-    show(`<div class="card"><h2>Quick ratings</h2>${items.map(([k, q, lo, hi]) => `
-      <label>${q}</label><div class="scale" data-k="${k}">${[1,2,3,4,5].map(n => `<button data-v="${n}">${n}</button>`).join("")}</div>
-      <div class="ends"><span>${lo}</span><span>${hi}</span></div>`).join("")}
+    show(`<div class="card"><h2>${baseline ? "Before you start" : "Quick ratings"}</h2>
+      ${baseline ? `<p class="muted">Two quick questions about how you feel right now.</p>` : `<p class="muted">The first two are about <b>you</b> during the block${keys.includes("indian") ? "; the last is about <b>the music</b>" : ""}.</p>`}
+      ${keys.map(k => `<label>${q(k)}</label><div class="scale" data-k="${k}">${SCALES[k][1].map((t, i) =>
+        `<button data-v="${i + 1}"><b>${i + 1}</b><span>${t}</span></button>`).join("")}</div>`).join("")}
       <button id="next" disabled>Continue</button></div>`);
     const next = document.getElementById("next");
-    document.querySelectorAll(".scale").forEach(s => s.querySelectorAll("button").forEach(b => b.onclick = () => {
-      s.querySelectorAll("button").forEach(x => x.classList.remove("on")); b.classList.add("on");
-      vals[s.dataset.k] = +b.dataset.v; next.disabled = Object.keys(vals).length < items.length;
+    document.querySelectorAll(".scale").forEach(sc => sc.querySelectorAll("button").forEach(b => b.onclick = () => {
+      sc.querySelectorAll("button").forEach(x => x.classList.remove("on")); b.classList.add("on");
+      vals[sc.dataset.k] = +b.dataset.v; next.disabled = Object.keys(vals).length < keys.length;
     }));
     next.onclick = () => { next.disabled = true; res(vals); };
   });
 }
+let chimeCtx = null;
+function chime() {                          // soft two-note chime; the page already had a click, so audio is allowed
+  try {
+    chimeCtx = chimeCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const t = chimeCtx.currentTime;
+    [[880, 0], [660, 0.18]].forEach(([f, dt]) => {
+      const o = chimeCtx.createOscillator(), g = chimeCtx.createGain();
+      o.type = "sine"; o.frequency.value = f;
+      g.gain.setValueAtTime(0, t + dt); g.gain.linearRampToValueAtTime(0.18, t + dt + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dt + 0.9);
+      o.connect(g).connect(chimeCtx.destination); o.start(t + dt); o.stop(t + dt + 1);
+    });
+  } catch (e) {}
+}
 async function rest(seconds) {
-  for (let s = seconds; s > 0; s--) {
-    show(`<div class="stage"><p>Short rest. Relax your eyes.</p><div class="big" style="font-size:3rem">${s}</div></div>`);
+  for (let sec = seconds; sec > 0; sec--) {
+    show(`<div class="stage"><p>Short rest. Close your eyes if you like; a chime will tell you when it is over.</p><div class="big" style="font-size:3rem">${sec}</div></div>`);
     await sleep(1000);
   }
+  chime();
 }
 async function cue(html, ms = 2500) {
   show(`<div class="stage">${html}</div>`); await sleep(ms);
@@ -342,7 +371,7 @@ async function runBlock(pos, key) {
   document.getElementById("load").textContent = ok ? "" : "The music is taking long to load; it will start as soon as it can.";
   const go = document.getElementById("go"); go.disabled = false; go.focus();
   await new Promise(res => go.onclick = () => { go.disabled = true; res(); });
-  hiddenCount = 0; inBlock = true;
+  hiddenCount = 0; inBlock = true; warn("");
   startMusic(key);
   for (let s = LEAD_IN_S; s > 0; s--) {
     show(`<div class="stage"><div class="fix">+</div><p class="muted">${c.file ? "Just listen" : "Sit quietly"} · ${s}s</p></div>`);
@@ -350,7 +379,7 @@ async function runBlock(pos, key) {
   }
   await cue(`<div class="cue">Numbers</div><p class="muted">Remember the order. Type them back in the same order.</p>`);
   const rc = await runRecall(rng, ctx);
-  stopMusic(); inBlock = false;
+  stopMusic(); inBlock = false; warn("");
   const rat = await ratings(key);
   for (const [k, v] of Object.entries(rat)) log({ ...ctx, task: "rating", stimulus: k, response: v });
   blockSummaries.push({
@@ -444,13 +473,20 @@ async function finish() {
   await attempt();
 }
 
+async function runBaseline() {               // one "right now" alertness/mood rating before the first block
+  if (S.baselineDone) return;
+  const base = await ratings("E", true);
+  for (const [k, v] of Object.entries(base)) log({ block_position: 0, condition: "baseline", style: "none", tempo: "none", task: "rating", stimulus: k, response: v });
+  S.baselineDone = true; saveState();
+}
+
 /* ---------- main ---------- */
 (async function main() {
   const saved = loadState();
   if (saved && await resumePrompt(saved)) {
     Object.assign(P, saved.P); P.resumes = (P.resumes || 0) + 1;
     rows.push(...saved.rows); blockSummaries.push(...saved.blockSummaries);
-    Object.assign(S, { nextBlock: saved.nextBlock, practiceDone: saved.practiceDone, finished: saved.finished });
+    Object.assign(S, { nextBlock: saved.nextBlock, practiceDone: saved.practiceDone, baselineDone: !!saved.baselineDone, finished: saved.finished });
     window.addEventListener("beforeunload", leaveGuard);
     for (const a of Object.values(players)) a.load();
     setProg(S.nextBlock / 5);
@@ -464,13 +500,15 @@ async function finish() {
   if (!S.practiceDone) {
     await screen(`<h2>The task: number lists</h2>
       <p>${RECALL_LEN} digits appear one at a time. Then type them back <b>in the same order</b>.</p>
-      <p>Example: you see 4, 9, 2, … → you type 4 9 2 …. If you forget one, type <b>-</b> in its place so the others stay in the right position.</p>
-      <p class="muted">It is meant to be hard; most people get about half to two-thirds right. Two practice lists first, without music.</p>`, "Try the practice lists");
+      <p>Each list uses all the digits 1–9 once, in a random order. Example: you see 4, 9, 2, … → you type 4 9 2 …. If you forget one, type <b>-</b> in its place so the others stay in the right position.</p>
+      <p class="muted">There is no time limit for typing; the music simply keeps playing until you finish. It is meant to be hard; most people get about half to two-thirds right. Two practice lists first, without music.</p>`, "Try the practice lists");
     await runRecall(mulberry32(1), {}, true, 2);
     S.practiceDone = true; saveState();
-    await screen(`<h2>Ready</h2><p>Five blocks follow, about 3 minutes each, each with different background music or silence. Each block starts with 30 seconds of just listening, then ${RECALL_LISTS} number lists.</p>
+    await runBaseline();
+    await screen(`<h2>Ready</h2><p>Five blocks follow, about 3 minutes each, each with different background music or silence. Each block starts with 30 seconds of just listening, then ${RECALL_LISTS} number lists (the screen shows "List 1 of ${RECALL_LISTS}" and so on). No time limit: the music keeps playing until you finish the last list.</p>
       <p class="muted">Don't change your volume, and keep this tab in front until the end. If the page closes by accident, open the link again on this computer to continue.</p>`, "Start");
   } else {
+    await runBaseline();
     await screen(`<h2>Continuing</h2><p>Next is block ${S.nextBlock + 1} of 5. As before: 30 seconds of listening, then ${RECALL_LISTS} number lists, typed back in the same order.</p>`, "Continue");
   }
   for (let i = S.nextBlock; i < 5; i++) {
