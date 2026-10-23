@@ -45,7 +45,9 @@ At the end the page uploads two CSVs to DataPipe (experiment `hmU1FxSIMrPB`), wh
 - `<ID>_<session>_trials.csv`: one row per recall list (stimulus, response, correct positions, response time) and rating, with condition, block position, order, Carnatic and Hindustani familiarity and training.
 - `<ID>_<session>_blocks.csv`: per-block summary (recall proportion correct in position, perfect lists, ratings, tab_hidden_count, audio_ok).
 
-`session` is random per run, so two students typing the same ID never overwrite each other. Runs with `?fast=1` are prefixed `TEST_` and have `test_run = 1`; `?nosave=1` uploads nothing. If the upload fails, the page shows the error, a retry button and download buttons. Progress is also backed up in the browser's localStorage after every trial.
+`session` is random per run, so two students typing the same ID never overwrite each other. Runs with `?fast=1` are prefixed `TEST_` and have `test_run = 1`; `?nosave=1` uploads nothing. If the upload fails, the page shows the error, a retry button and download buttons.
+
+**Progress saving.** After every completed block the page (1) saves its state in the browser (localStorage) and (2) uploads `<ID>_<session>_progress_b<N>.csv` with all trials so far, in the background. If the tab closes or the page reloads, opening the link again on the same computer (within 6 hours) offers *Continue my session* (same order, practice not repeated; the interrupted block restarts from its beginning and its partial data is discarded) or *Start over*. A session that finished but failed to upload offers *Save my answers*. Rows record `resumes` (how many times the session was resumed). For analysis, use the final `_trials.csv` when it exists, otherwise the highest-numbered `_progress_b<N>` file for that session.
 
 ## Notes
 - Williams design balances position and first-order carry-over across every 10 participants; block position is still in the data as a covariate.

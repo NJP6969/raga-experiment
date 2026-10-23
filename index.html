@@ -89,6 +89,37 @@ let current = null;
 document.addEventListener("visibilitychange", () => { if (document.hidden && inBlock) hiddenCount++; });
 const leaveGuard = e => { e.preventDefault(); e.returnValue = ""; };
 
+/* ---------- saved progress (survives reloads and closed tabs on this computer) ---------- */
+const STATE_KEY = "raga_state_v1", STATE_MAX_AGE_H = 6;
+const S = { nextBlock: 0, practiceDone: false, finished: false };
+function saveState() {
+  try {
+    localStorage.setItem(STATE_KEY, JSON.stringify({ ...S, savedAt: Date.now(), fast: FAST, P, rows, blockSummaries }));
+  } catch (e) {}
+}
+function loadState() {
+  try {
+    const st = JSON.parse(localStorage.getItem(STATE_KEY) || "null");
+    if (!st || !st.P || !st.P.session || st.fast !== FAST) return null;
+    if ((Date.now() - st.savedAt) / 3.6e6 > STATE_MAX_AGE_H) { localStorage.removeItem(STATE_KEY); return null; }
+    return st;
+  } catch (e) { return null; }
+}
+function clearState() { try { localStorage.removeItem(STATE_KEY); } catch (e) {} }
+function resumePrompt(st) {
+  return new Promise(res => {
+    const what = st.finished ? "You finished all five blocks, but your answers were not saved yet."
+      : st.nextBlock > 0 ? `You completed ${st.nextBlock} of 5 blocks.` : "You started but did not finish the practice or the first block.";
+    show(`<div class="card"><h1>Welcome back</h1>
+      <p>This computer has an unfinished session (ID <b>${String(st.P.id).replace(/[<>&]/g, "")}</b>, started ${new Date(st.savedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}). ${what}</p>
+      <p class="muted">${st.finished ? "" : "Continuing restarts the block you were in, from its beginning."}</p>
+      <button id="cont">${st.finished ? "Save my answers" : "Continue my session"}</button>
+      <button id="fresh" class="secondary">Start over</button></div>`);
+    document.getElementById("cont").onclick = () => res(true);
+    document.getElementById("fresh").onclick = () => res(false);
+  });
+}
+
 /* ---------- helpers ---------- */
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const nextFrame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r())));
@@ -112,9 +143,8 @@ function mean(a) { return a.length ? a.reduce((x, y) => x + y, 0) / a.length : N
 function fmt(x, d = 0) { return Number.isFinite(x) ? x.toFixed(d) : "–"; }
 
 function log(r) {
-  rows.push({ participant: P.id, session_id: P.session, test_run: FAST ? 1 : 0, order_row: P.row + 1, order: P.order.join(""), order_source: P_orderSource, fam_carnatic: P.famC, fam_hindustani: P.famH, training_years: P.training,
+  rows.push({ participant: P.id, session_id: P.session, test_run: FAST ? 1 : 0, order_row: P.row + 1, order: P.order.join(""), order_source: P.orderSource, resumes: P.resumes, fam_carnatic: P.famC, fam_hindustani: P.famH, training_years: P.training,
               audio_ok: audioOK, timestamp: new Date().toISOString(), ...r });
-  try { localStorage.setItem("raga_backup_" + P.session, JSON.stringify(rows)); } catch (e) {}
 }
 
 function startMusic(key) {
@@ -149,14 +179,14 @@ async function assignOrder() {             // next order in rotation from DataPi
       if (res.ok) {
         const d = await res.json();
         const c = typeof d === "number" ? d : d.condition;
-        if (Number.isInteger(c)) { P_orderSource = "datapipe"; return c % ORDERS.length; }
+        if (Number.isInteger(c)) { orderSource = "datapipe"; return c % ORDERS.length; }
       }
     } catch (e) {}
   }
-  P_orderSource = "random";
+  orderSource = "random";
   return Math.floor(Math.random() * ORDERS.length);
 }
-let P_orderSource = "url";
+let orderSource = "url";
 async function setup() {
   const touchOnly = matchMedia("(pointer: coarse)").matches && !matchMedia("(pointer: fine)").matches;
   if (touchOnly) {
@@ -188,6 +218,7 @@ async function setup() {
         training: Math.max(0, +document.getElementById("trn").value || 0),
         row: Q.has("row") ? (+Q.get("row") - 1) % ORDERS.length : await assignOrder() };
   P.order = ORDERS[P.row].split("");
+  P.orderSource = orderSource; P.resumes = 0;
   P.session = Math.random().toString(36).slice(2, 10);       // unique even if two students type the same ID
   P.seed = hash(id + P.session);
   window.addEventListener("beforeunload", leaveGuard);
@@ -326,7 +357,7 @@ async function runBlock(pos, key) {
     participant: P.id, session_id: P.session, test_run: FAST ? 1 : 0, block_position: pos + 1, condition: key, label: c.label, style: c.style, tempo: c.tempo,
     order: P.order.join(""), recall_prop_correct: rc.prop, recall_lists_perfect: rc.perfect,
     alertness: rat.alertness, mood: rat.mood, indian: rat.indian ?? "",
-    tab_hidden_count: hiddenCount, audio_ok: audioOK
+    tab_hidden_count: hiddenCount, audio_ok: audioOK, resumes: P.resumes
   });
   if (pos < 4) await rest(REST_S);
 }
@@ -360,10 +391,18 @@ async function upload(filename, text) {
   return { ok: false, error: "server unavailable" };
 }
 
+function fileBase() {
+  return `${FAST ? "TEST_" : ""}${String(P.id).replace(/[^A-Za-z0-9-]/g, "") || "anon"}_${P.session}`;
+}
+function uploadProgress(blocksDone) {         // cumulative trials so far; fire-and-forget, never blocks the participant
+  if (!SAVE) return;
+  upload(`${fileBase()}_progress_b${blocksDone}${P.resumes ? "_r" + P.resumes : ""}.csv`, toCSV(rows)).catch(() => {});
+}
+
 async function finish() {
   setProg(1);
   const sorted = [...blockSummaries].sort((a, b) => a.condition.localeCompare(b.condition));
-  const base = `${FAST ? "TEST_" : ""}${String(P.id).replace(/[^A-Za-z0-9-]/g, "") || "anon"}_${P.session}`;
+  const base = fileBase();
   const files = [[`${base}_trials.csv`, toCSV(rows)], [`${base}_blocks.csv`, toCSV(blockSummaries)]];
   show(`<div class="card"><h1>Done, thank you</h1>
     <p id="saveStatus"><b>Saving your responses…</b> Please keep this tab open.</p>
@@ -379,7 +418,7 @@ async function finish() {
     document.getElementById("d2").onclick = () => download(files[1][0], files[1][1]);
   };
   if (!SAVE) {
-    window.removeEventListener("beforeunload", leaveGuard);
+    window.removeEventListener("beforeunload", leaveGuard); clearState();
     status.innerHTML = "<b>Test mode:</b> nothing was uploaded.";
     actions.innerHTML = downloads; wireDownloads(); return;
   }
@@ -393,7 +432,7 @@ async function finish() {
       if (r.ok) pending[i] = false; else err = r.error;
     }
     if (!pending.some(Boolean)) {
-      window.removeEventListener("beforeunload", leaveGuard);
+      window.removeEventListener("beforeunload", leaveGuard); clearState();
       status.innerHTML = "<b>Your responses are saved.</b> You can close this tab.";
       actions.innerHTML = `<p class="muted">Optional: keep a copy.</p>` + downloads; wireDownloads();
     } else {
@@ -407,16 +446,38 @@ async function finish() {
 
 /* ---------- main ---------- */
 (async function main() {
-  await setup();
+  const saved = loadState();
+  if (saved && await resumePrompt(saved)) {
+    Object.assign(P, saved.P); P.resumes = (P.resumes || 0) + 1;
+    rows.push(...saved.rows); blockSummaries.push(...saved.blockSummaries);
+    Object.assign(S, { nextBlock: saved.nextBlock, practiceDone: saved.practiceDone, finished: saved.finished });
+    window.addEventListener("beforeunload", leaveGuard);
+    for (const a of Object.values(players)) a.load();
+    setProg(S.nextBlock / 5);
+    if (S.finished) { await finish(); return; }
+  } else {
+    clearState();
+    await setup();
+  }
+  saveState();
   await volumeCheck();
-  await screen(`<h2>The task: number lists</h2>
-    <p>${RECALL_LEN} digits appear one at a time. Then type them back <b>in the same order</b>.</p>
-    <p>Example: you see 4, 9, 2, … → you type 4 9 2 …. If you forget one, type <b>-</b> in its place so the others stay in the right position.</p>
-    <p class="muted">It is meant to be hard; most people get about half to two-thirds right. Two practice lists first, without music.</p>`, "Try the practice lists");
-  await runRecall(mulberry32(1), {}, true, 2);
-  await screen(`<h2>Ready</h2><p>Five blocks follow, about 3 minutes each, each with different background music or silence. Each block starts with 30 seconds of just listening, then ${RECALL_LISTS} number lists.</p>
-    <p class="muted">Don't change your volume, and keep this tab in front until the end.</p>`, "Start");
-  for (let i = 0; i < 5; i++) await runBlock(i, P.order[i]);
+  if (!S.practiceDone) {
+    await screen(`<h2>The task: number lists</h2>
+      <p>${RECALL_LEN} digits appear one at a time. Then type them back <b>in the same order</b>.</p>
+      <p>Example: you see 4, 9, 2, … → you type 4 9 2 …. If you forget one, type <b>-</b> in its place so the others stay in the right position.</p>
+      <p class="muted">It is meant to be hard; most people get about half to two-thirds right. Two practice lists first, without music.</p>`, "Try the practice lists");
+    await runRecall(mulberry32(1), {}, true, 2);
+    S.practiceDone = true; saveState();
+    await screen(`<h2>Ready</h2><p>Five blocks follow, about 3 minutes each, each with different background music or silence. Each block starts with 30 seconds of just listening, then ${RECALL_LISTS} number lists.</p>
+      <p class="muted">Don't change your volume, and keep this tab in front until the end. If the page closes by accident, open the link again on this computer to continue.</p>`, "Start");
+  } else {
+    await screen(`<h2>Continuing</h2><p>Next is block ${S.nextBlock + 1} of 5. As before: 30 seconds of listening, then ${RECALL_LISTS} number lists, typed back in the same order.</p>`, "Continue");
+  }
+  for (let i = S.nextBlock; i < 5; i++) {
+    await runBlock(i, P.order[i]);
+    S.nextBlock = i + 1; saveState(); uploadProgress(i + 1);
+  }
+  S.finished = true; saveState();
   await finish();
 })();
 </script>
