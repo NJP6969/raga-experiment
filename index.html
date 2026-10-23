@@ -48,6 +48,17 @@
   .pad button.done:disabled { opacity:.35; }
   .slots span.cur { border-color:var(--accent); }
   .seq { font-size:1.6rem; font-weight:700; letter-spacing:.3em; }
+  fieldset.choice { border:0; padding:0; margin:14px 0 0; min-width:0; }
+  fieldset.choice legend { font-weight:600; padding:0; margin-bottom:6px; }
+  .seg { display:flex; gap:8px; }
+  .seg label { flex:1; margin:0; position:relative; }
+  .seg input { position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer; }
+  .seg span { display:block; text-align:center; padding:10px; border:1px solid var(--line-strong); border-radius:8px; background:var(--card); }
+  .seg input:checked + span { background:var(--accent); color:var(--accent-fg); border-color:var(--accent); }
+  .seg input:focus-visible + span { outline:2px solid var(--accent); outline-offset:2px; }
+  .opt { font-weight:400; color:var(--muted); font-size:.9rem; }
+  .field-msg { margin:4px 0 0; font-size:.85rem; color:var(--muted); min-height:1.25em; }
+  .field-msg.err { color:var(--bad); }
   .ok { color:var(--ok); } .bad { color:var(--bad); }
 </style>
 </head>
@@ -136,7 +147,7 @@ function resumePrompt(st) {
     const what = st.finished ? "You finished all five blocks, but your answers were not saved yet."
       : st.nextBlock > 0 ? `You completed ${st.nextBlock} of 5 blocks.` : "You started but did not finish the practice or the first block.";
     show(`<div class="card"><h1>Welcome back</h1>
-      <p>This computer has an unfinished session (ID <b>${String(st.P.id).replace(/[<>&]/g, "")}</b>, started ${new Date(st.savedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}). ${what}</p>
+      <p>This computer has an unfinished session (${st.P.name ? `<b>${esc(st.P.name)}</b>, ` : ""}ID <b>${esc(st.P.id)}</b>, started ${new Date(st.savedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}). ${what}</p>
       <p class="muted">${st.finished ? "" : "Continuing restarts the block you were in, from its beginning."}</p>
       <button id="cont">${st.finished ? "Save my answers" : "Continue my session"}</button>
       <button id="fresh" class="secondary">Start over</button></div>`);
@@ -164,11 +175,16 @@ function mulberry32(a) {
 }
 function hash(s) { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
 function shuffle(a, rng) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const ROLL_LEN = 10;                                          // roll numbers are exactly 10 digits
+const validRoll = v => new RegExp(`^\\d{${ROLL_LEN}}$`).test(v);
+const cleanName = v => v.trim().replace(/\s+/g, " ");
+const validName = v => /^[\p{L}\p{M}][\p{L}\p{M} .'-]*$/u.test(v) && (v.match(/\p{L}/gu) || []).length >= 2;
 function mean(a) { return a.length ? a.reduce((x, y) => x + y, 0) / a.length : NaN; }
 function fmt(x, d = 0) { return Number.isFinite(x) ? x.toFixed(d) : "–"; }
 
 function log(r) {
-  rows.push({ participant: P.id, session_id: P.session, device: P.device, test_run: FAST ? 1 : 0, order_row: P.row + 1, order: P.order.join(""), order_source: P.orderSource, resumes: P.resumes, fam_carnatic: P.famC, fam_hindustani: P.famH, training_years: P.training,
+  rows.push({ participant: P.id, session_id: P.session, music_course: P.musicCourse, full_name: P.name, device: P.device, test_run: FAST ? 1 : 0, order_row: P.row + 1, order: P.order.join(""), order_source: P.orderSource, resumes: P.resumes, fam_carnatic: P.famC, fam_hindustani: P.famH, training_years: P.training,
               audio_ok: audioOK, timestamp: new Date().toISOString(), ...r });
 }
 
@@ -215,10 +231,25 @@ let orderSource = "url";
 async function setup() {
   show(`<div class="card">
     <h1>Music and Memory Task</h1>
-    <p>About 18 minutes. You will do one short memory task five times, with different background music (or silence) each time. Works on a phone or a laptop. Use headphones, sit somewhere quiet, and keep this page open and in front until the end.</p>
-    <p class="muted">Participation is voluntary and confidential. Your roll number is used only to link your sessions (for example if you need to continue later) and is removed before the data are analysed or shared. You can stop at any time by closing the page.</p>
-    <label for="pid">Roll number</label>
-    <input id="pid" type="text" inputmode="numeric" autocomplete="off" maxlength="15" placeholder="e.g. 2023102029">
+    <p>About 18 minutes. You will do one short memory task five times, with different background music (or silence) each time. Works on a phone, tablet or laptop. Use headphones, sit somewhere quiet, and keep this page open and in front until the end.</p>
+    <p class="muted">Participation is voluntary and confidential. Your name and roll number are used only to record course participation and to link your sessions (for example if you need to continue later); they are removed before the data are analysed or shared. You can stop at any time by closing the page.</p>
+    <fieldset class="choice" id="courseQ">
+      <legend>Are you part of the Music Course?</legend>
+      <div class="seg">
+        <label><input type="radio" name="course" value="yes"><span>Yes</span></label>
+        <label><input type="radio" name="course" value="no"><span>No</span></label>
+      </div>
+    </fieldset>
+    <div id="nameRow" hidden>
+      <label for="pname">Full name</label>
+      <input id="pname" type="text" autocomplete="name" autocapitalize="words" spellcheck="false" maxlength="80" aria-describedby="nameMsg">
+      <p class="field-msg" id="nameMsg" aria-live="polite"></p>
+    </div>
+    <div id="rollRow" hidden>
+      <label for="pid">Roll number <span class="opt" id="rollOpt">(optional)</span></label>
+      <input id="pid" type="text" inputmode="numeric" autocomplete="off" placeholder="10 digits, e.g. 2023102029" aria-describedby="pidMsg">
+      <p class="field-msg" id="pidMsg" aria-live="polite"></p>
+    </div>
     <label for="famC">How familiar are you with Carnatic (South Indian classical) music?</label>
     <select id="famC"><option value="" selected disabled>choose 1–5</option><option value="1">1 – not at all</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5 – very familiar</option></select>
     <label for="famH">How familiar are you with Hindustani (North Indian classical) music?</label>
@@ -228,19 +259,42 @@ async function setup() {
     <label><input id="hear" type="checkbox" style="margin-right:8px">I have normal or corrected hearing and I am wearing headphones.</label>
     <button id="start" disabled>Begin</button>
   </div>`);
-  const hear = document.getElementById("hear"), start = document.getElementById("start");
-  const pid = document.getElementById("pid");
-  const ready = () => start.disabled = !(hear.checked && document.getElementById("famC").value && document.getElementById("famH").value
-                                        && /^[A-Za-z0-9-]{4,15}$/.test(pid.value.trim()));
-  hear.onchange = ready; document.getElementById("famC").onchange = ready; document.getElementById("famH").onchange = ready; pid.oninput = ready;
+  const $ = id => document.getElementById(id);
+  const hear = $("hear"), start = $("start"), pid = $("pid"), pname = $("pname");
+  const courseVal = () => (document.querySelector('input[name="course"]:checked') || {}).value;
+  const touched = { pid: false, pname: false };
+  const ready = () => {
+    const c = courseVal(), member = c === "yes";
+    $("nameRow").hidden = !member; $("rollRow").hidden = !c;
+    $("rollOpt").textContent = member ? "" : "(optional)";
+    const roll = pid.value, name = cleanName(pname.value);
+    const rollOk = roll === "" ? !member : validRoll(roll), nameOk = !member || validName(name);
+    // roll number: count while typing, error once the field is left (or when it is required and empty)
+    const rollErr = !rollOk && touched.pid;
+    $("pidMsg").textContent = rollErr ? (roll === "" ? `Enter your ${ROLL_LEN}-digit roll number.` : `Roll number must be exactly ${ROLL_LEN} digits.`)
+      : roll && roll.length < ROLL_LEN ? `${roll.length} of ${ROLL_LEN} digits` : "";
+    $("pidMsg").classList.toggle("err", rollErr);
+    const nameErr = !nameOk && touched.pname;
+    $("nameMsg").textContent = nameErr ? "Enter your full name (letters only)." : "";
+    $("nameMsg").classList.toggle("err", nameErr);
+    start.disabled = !(c && rollOk && nameOk && hear.checked && $("famC").value && $("famH").value);
+  };
+  pid.oninput = () => { pid.value = pid.value.replace(/\D/g, "").slice(0, ROLL_LEN); if (pid.value.length === ROLL_LEN) touched.pid = true; ready(); };
+  pid.onblur = () => { touched.pid = pid.value !== "" || courseVal() === "yes"; ready(); };
+  pname.oninput = ready; pname.onblur = () => { touched.pname = true; ready(); };
+  document.querySelectorAll('input[name="course"]').forEach(r => r.onchange = () => { touched.pid = touched.pid && pid.value !== ""; ready(); });
+  hear.onchange = ready; $("famC").onchange = ready; $("famH").onchange = ready;
   await new Promise(res => start.onclick = () => { unlockAudio(); res(); });
-  const id = pid.value.trim();
-  P = { id, famC: +document.getElementById("famC").value, famH: +document.getElementById("famH").value,
-        training: Math.max(0, +document.getElementById("trn").value || 0),
+  const member = courseVal() === "yes";
+  const session = Math.random().toString(36).slice(2, 10);   // unique even if two students type the same ID
+  const id = pid.value || `anon-${session}`;                  // no roll number: a unique anonymous ID
+  P = { id, musicCourse: member ? 1 : 0, name: member ? cleanName(pname.value) : "",
+        famC: +$("famC").value, famH: +$("famH").value,
+        training: Math.max(0, +$("trn").value || 0),
         row: Q.has("row") ? (+Q.get("row") - 1) % ORDERS.length : await assignOrder() };
   P.order = ORDERS[P.row].split("");
   P.orderSource = orderSource; P.resumes = 0;
-  P.session = Math.random().toString(36).slice(2, 10);       // unique even if two students type the same ID
+  P.session = session;
   P.seed = hash(id + P.session);
   P.device = matchMedia("(pointer: coarse)").matches ? "touch" : "computer";
   keepAwake();
@@ -407,7 +461,7 @@ async function runBlock(pos, key) {
   const rat = await ratings(key);
   for (const [k, v] of Object.entries(rat)) log({ ...ctx, task: "rating", stimulus: k, response: v });
   blockSummaries.push({
-    participant: P.id, session_id: P.session, test_run: FAST ? 1 : 0, block_position: pos + 1, condition: key, label: c.label, style: c.style, tempo: c.tempo,
+    participant: P.id, session_id: P.session, music_course: P.musicCourse, full_name: P.name, test_run: FAST ? 1 : 0, block_position: pos + 1, condition: key, label: c.label, style: c.style, tempo: c.tempo,
     order: P.order.join(""), recall_prop_correct: rc.prop, recall_lists_perfect: rc.perfect,
     alertness: rat.alertness, mood: rat.mood, indian: rat.indian ?? "",
     tab_hidden_count: hiddenCount, audio_ok: audioOK, resumes: P.resumes

@@ -53,7 +53,9 @@ async function advanceUntil(page, locator, { step = 500, max = 120_000 } = {}) {
 
 async function press(page, locator, touch) { return touch ? locator.tap() : locator.click(); }
 
-async function fillIntro(page, { roll = "2023102029", famC = "3", famH = "2", training = "0" } = {}) {
+async function fillIntro(page, { course = "yes", name = "Test Student", roll = "2023102029", famC = "3", famH = "2", training = "0" } = {}) {
+  await page.getByRole("radio", { name: course === "yes" ? "Yes" : "No", exact: true }).check();
+  if (course === "yes") await page.fill("#pname", name);
   await page.fill("#pid", roll);
   await page.selectOption("#famC", famC);
   await page.selectOption("#famH", famH);

@@ -27,6 +27,7 @@ test.describe("core experiment flow", () => {
     expect(new Set(recall.map(r => r.condition))).toEqual(new Set(["A", "B", "C", "D", "E"]));
     expect(recall.map(r => r.condition).filter((c, i, a) => c !== a[i - 1]).join("")).toBe("ABECD");
     expect(recall.every(r => r.participant === "2023102029" && r.test_run === "1" && r.order === "ABECD")).toBe(true);
+    expect(recall.every(r => r.music_course === "1" && r.full_name === "Test Student")).toBe(true);
     expect(recall[0].input).toBe(touch ? "keypad" : "keyboard");
     expect(recall[0].device).toBe(touch ? "touch" : "computer");
     const ratings = trials.filter(r => r.task === "rating");
@@ -35,7 +36,7 @@ test.describe("core experiment flow", () => {
     const blocks = await downloadCSV(page, "#d2");
     expect(blocks).toHaveLength(5);
     expect(blocks.map(b => b.condition).join("")).toBe("ABECD");
-    expect(blocks.every(b => b.recall_prop_correct === "1")).toBe(true);
+    expect(blocks.every(b => b.recall_prop_correct === "1" && b.music_course === "1" && b.full_name === "Test Student")).toBe(true);
   });
 
   test("reload mid-session offers to continue and restarts the interrupted block", async ({ page }, testInfo) => {
