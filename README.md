@@ -31,13 +31,14 @@ Consent and info, volume check, one practice of each task (no music), then 5 blo
 ## URL options
 - `?fast=1` shortens lead-in and rest (3 s and 2 s) for piloting.
 - `?row=3` forces Latin-square row 1–5. Default is random.
+- `?nosave=1` runs without uploading (data can still be downloaded at the end).
 
 ## Output
-Students download two CSVs at the end:
-- `trials_<ID>.csv`: one row per digit list, Stroop trial and rating (RT in ms, condition, block position, Carnatic and Hindustani familiarity, training).
-- `blocks_<ID>.csv`: per-block summary (max span, total, Stroop interference, error rate, ratings).
+At the end the page uploads two CSVs to DataPipe (experiment `hmU1FxSIMrPB`), which stores them in its Google Drive folder:
+- `<ID>_<session>_trials.csv`: one row per digit list, Stroop trial and rating (RT in ms, condition, block position, Carnatic and Hindustani familiarity, training).
+- `<ID>_<session>_blocks.csv`: per-block summary (max span, total, Stroop interference, error rate, ratings).
 
-Progress is also backed up in the browser's localStorage after every trial.
+`session` is random per run, so two students typing the same ID never overwrite each other. Runs with `?fast=1` are prefixed `TEST_` and have `test_run = 1`; `?nosave=1` uploads nothing. If the upload fails, the page shows the error, a retry button and download buttons. Progress is also backed up in the browser's localStorage after every trial.
 
 ## Notes
 - Stroop RT is measured with `performance.now()` from the frame after the word is drawn. Fine for class-level differences, not a lab-grade timer.

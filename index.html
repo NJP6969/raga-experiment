@@ -51,6 +51,8 @@
 /* ---------- config ---------- */
 const Q = new URLSearchParams(location.search);
 const FAST = Q.has("fast");                 // ?fast=1 shortens lead-in and rest, for piloting
+const SAVE = !Q.has("nosave");              // ?nosave=1 runs without uploading anything
+const DATAPIPE_ID = "hmU1FxSIMrPB";         // DataPipe experiment; files land in its Google Drive folder
 const LEAD_IN_S = FAST ? 3 : 60;
 const REST_S = FAST ? 2 : 20;
 const SPAN_BUDGET_MS = 75000;               // no new digit-span length after this
@@ -99,9 +101,9 @@ function mean(a) { return a.length ? a.reduce((x, y) => x + y, 0) / a.length : N
 function fmt(x, d = 0) { return Number.isFinite(x) ? x.toFixed(d) : "–"; }
 
 function log(r) {
-  rows.push({ participant: P.id, latin_row: P.row + 1, fam_carnatic: P.famC, fam_hindustani: P.famH, training_years: P.training,
+  rows.push({ participant: P.id, session_id: P.session, test_run: FAST ? 1 : 0, latin_row: P.row + 1, fam_carnatic: P.famC, fam_hindustani: P.famH, training_years: P.training,
               audio_ok: audioOK, timestamp: new Date().toISOString(), ...r });
-  try { localStorage.setItem("raga_backup_" + P.id, JSON.stringify(rows)); } catch (e) {}
+  try { localStorage.setItem("raga_backup_" + P.session, JSON.stringify(rows)); } catch (e) {}
 }
 
 function startMusic(file) {
@@ -139,6 +141,7 @@ async function setup() {
   P = { id, famC: +document.getElementById("famC").value, famH: +document.getElementById("famH").value, training: +document.getElementById("trn").value,
         row: Q.has("row") ? (+Q.get("row") - 1) % 5 : Math.floor(Math.random() * 5) };
   P.order = LATIN[P.row].split("");
+  P.session = Math.random().toString(36).slice(2, 10);       // unique even if two students type the same ID
   P.seed = hash(id);
 }
 
@@ -289,7 +292,7 @@ async function runBlock(pos, key) {
   const rat = await ratings(key);
   for (const [k, v] of Object.entries(rat)) log({ ...ctx, task: "rating", stimulus: k, response: v });
   blockSummaries.push({
-    participant: P.id, block_position: pos + 1, condition: key, label: c.label, style: c.style, tempo: c.tempo,
+    participant: P.id, session_id: P.session, test_run: FAST ? 1 : 0, block_position: pos + 1, condition: key, label: c.label, style: c.style, tempo: c.tempo,
     span_max: sp.maxLen, span_total: sp.total,
     stroop_cong_rt: mean(rt(1)), stroop_incong_rt: mean(rt(0)), stroop_interference: mean(rt(0)) - mean(rt(1)),
     stroop_error_rate: st.filter(t => !t.correct).length / st.length,
@@ -309,18 +312,65 @@ function download(name, text) {
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([text], { type: "text/csv" })); a.download = name; a.click();
 }
-function finish() {
+async function upload(filename, text) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch("https://pipe.jspsych.org/api/data/", {
+        method: "POST", headers: { "Content-Type": "application/json", Accept: "*/*" },
+        body: JSON.stringify({ experimentID: DATAPIPE_ID, filename, data: text })
+      });
+      if (res.ok) return { ok: true };
+      const body = await res.json().catch(() => ({}));
+      if (res.status < 500) return { ok: false, error: body.message || `HTTP ${res.status}` };   // retrying will not help
+    } catch (e) {
+      if (attempt === 2) return { ok: false, error: e.message };
+    }
+    await sleep(1500 * (attempt + 1));
+  }
+  return { ok: false, error: "server unavailable" };
+}
+
+async function finish() {
   setProg(1);
   const sorted = [...blockSummaries].sort((a, b) => a.condition.localeCompare(b.condition));
+  const base = `${FAST ? "TEST_" : ""}${String(P.id).replace(/[^A-Za-z0-9-]/g, "") || "anon"}_${P.session}`;
+  const files = [[`${base}_trials.csv`, toCSV(rows)], [`${base}_blocks.csv`, toCSV(blockSummaries)]];
   show(`<div class="card"><h1>Done, thank you</h1>
-    <p>Download both files and upload them to the shared folder your instructor gave you.</p>
-    <button id="d1">Download trial data</button> <button id="d2" class="secondary">Download block summary</button>
+    <p id="saveStatus"><b>Saving your responses…</b> Please keep this tab open.</p>
+    <div id="saveActions"></div>
     <h2 style="margin-top:24px">Your results</h2>
     <table><tr><th>Condition</th><th>Span</th><th>Stroop interf. (ms)</th><th>Errors</th><th>Alert</th><th>Mood</th><th>Indian</th></tr>
     ${sorted.map(b => `<tr><td>${b.label}</td><td>${b.span_max}</td><td>${fmt(b.stroop_interference)}</td><td>${fmt(b.stroop_error_rate * 100)}%</td><td>${b.alertness}</td><td>${b.mood}</td><td>${b.indian || "–"}</td></tr>`).join("")}</table>
     <p class="muted">One person's numbers are noisy and do not show an effect on their own. The class data are what count.</p></div>`);
-  document.getElementById("d1").onclick = () => download(`trials_${P.id}.csv`, toCSV(rows));
-  document.getElementById("d2").onclick = () => download(`blocks_${P.id}.csv`, toCSV(blockSummaries));
+  const status = document.getElementById("saveStatus"), actions = document.getElementById("saveActions");
+  const downloads = `<button id="d1" class="secondary">Download trial data</button> <button id="d2" class="secondary">Download block summary</button>`;
+  const wireDownloads = () => {
+    document.getElementById("d1").onclick = () => download(files[0][0], files[0][1]);
+    document.getElementById("d2").onclick = () => download(files[1][0], files[1][1]);
+  };
+  if (!SAVE) {
+    status.innerHTML = "<b>Test mode:</b> nothing was uploaded.";
+    actions.innerHTML = downloads; wireDownloads(); return;
+  }
+  const pending = files.map(() => true);
+  const attempt = async () => {
+    status.innerHTML = "<b>Saving your responses…</b> Please keep this tab open."; actions.innerHTML = "";
+    let err = "";
+    for (let i = 0; i < files.length; i++) {
+      if (!pending[i]) continue;
+      const r = await upload(files[i][0], files[i][1]);
+      if (r.ok) pending[i] = false; else err = r.error;
+    }
+    if (!pending.some(Boolean)) {
+      status.innerHTML = "<b>Your responses are saved.</b> You can close this tab.";
+      actions.innerHTML = `<p class="muted">Optional: keep a copy.</p>` + downloads; wireDownloads();
+    } else {
+      status.innerHTML = `<b>Your responses could not be saved</b> (${err}). Try again; if it still fails, download both files and send them to your instructor.`;
+      actions.innerHTML = `<button id="retry">Try again</button> ` + downloads; wireDownloads();
+      document.getElementById("retry").onclick = attempt;
+    }
+  };
+  await attempt();
 }
 
 /* ---------- main ---------- */
