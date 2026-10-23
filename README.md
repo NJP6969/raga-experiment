@@ -26,7 +26,13 @@ python make_stimuli.py --assets ASSETS --fluidsynth PATH/fluidsynth.exe --gm PAT
 ```
 
 ## Flow
-Consent and info, volume check, one practice of each task (no music), then 5 blocks in the student's Latin-square order: 1 min listening, backward digit span, 24-trial Stroop (music still playing), ratings (alertness, mood, and "how Indian" for music blocks), 20 s rest. About 25 min.
+1. Start screen (ID, Carnatic and Hindustani familiarity, training, hearing check). Phones and tablets are told to use a laptop (the colour task needs a keyboard).
+2. Volume check with a music sample. All four tracks start downloading here; each block waits until its track can play through.
+3. Practice without music: 2 serial-recall lists (with feedback) and 8 Stroop trials (with feedback).
+4. Five blocks in the student's Latin-square order. Each block: 1 min listening → "Numbers" cue → **serial recall**, 6 lists of 8 digits (8 of the digits 1–9, no repeats, no runs like 3-4-5; 0.75 s on, 0.25 s off; type them back in order, `-` for forgotten ones, all 8 positions required) → "Colours" cue → **Stroop**, 48 trials (24 congruent, 24 incongruent; no identical back-to-back trials, no ink three times running; 2 s response limit) → ratings (alertness, mood, and "how Indian" for music blocks) → 20 s rest. Music plays from the start of the block through both tasks.
+5. Results table and upload.
+
+About 24 minutes in total. Leaving the page mid-session triggers a "leave site?" prompt; how often the tab was hidden during each block is recorded (`tab_hidden_count`).
 
 ## URL options
 - `?fast=1` shortens lead-in and rest (3 s and 2 s) for piloting.
@@ -35,8 +41,8 @@ Consent and info, volume check, one practice of each task (no music), then 5 blo
 
 ## Output
 At the end the page uploads two CSVs to DataPipe (experiment `hmU1FxSIMrPB`), which stores them in its Google Drive folder:
-- `<ID>_<session>_trials.csv`: one row per digit list, Stroop trial and rating (RT in ms, condition, block position, Carnatic and Hindustani familiarity, training).
-- `<ID>_<session>_blocks.csv`: per-block summary (max span, total, Stroop interference, error rate, ratings).
+- `<ID>_<session>_trials.csv`: one row per recall list (stimulus, response, correct positions), Stroop trial (word, ink, response, RT in ms) and rating, with condition, block position, Carnatic and Hindustani familiarity and training.
+- `<ID>_<session>_blocks.csv`: per-block summary (recall proportion correct in position, perfect lists, Stroop congruent/incongruent RT, interference, error rate, ratings, tab_hidden_count, audio_ok).
 
 `session` is random per run, so two students typing the same ID never overwrite each other. Runs with `?fast=1` are prefixed `TEST_` and have `test_run = 1`; `?nosave=1` uploads nothing. If the upload fails, the page shows the error, a retry button and download buttons. Progress is also backed up in the browser's localStorage after every trial.
 
