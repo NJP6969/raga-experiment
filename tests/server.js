@@ -13,7 +13,7 @@ const TYPES = {
   ".txt": "text/plain; charset=utf-8", ".ico": "image/x-icon"
 };
 
-http.createServer((req, res) => {
+const server = http.createServer((req, res) => {
   let rel;
   try { rel = decodeURIComponent(new URL(req.url, "http://x").pathname); } catch (e) { res.writeHead(400); return res.end(); }
   if (rel.endsWith("/")) rel += "index.html";
@@ -33,4 +33,14 @@ http.createServer((req, res) => {
     res.writeHead(200, { ...headers, "Content-Length": st.size });
     return req.method === "HEAD" ? res.end() : fs.createReadStream(file).pipe(res);
   });
-}).listen(PORT, "127.0.0.1", () => console.log(`serving ${ROOT} at http://127.0.0.1:${PORT}/`));
+});
+server.on("error", e => {
+  if (e.code !== "EADDRINUSE") throw e;
+  console.error(`Port ${PORT} is already in use, so the site may already be running: open http://127.0.0.1:${PORT}/`);
+  console.error(`To use another port: set PORT first (PowerShell: $env:PORT=4174; npm run serve   bash: PORT=4174 npm run serve).`);
+  process.exit(1);
+});
+server.listen(PORT, "127.0.0.1", () => {
+  console.log(`serving ${ROOT} at http://127.0.0.1:${PORT}/`);
+  console.log(`try the task without uploading anything: http://127.0.0.1:${PORT}/index.html?nosave=1&fast=1   (Ctrl+C stops)`);
+});
