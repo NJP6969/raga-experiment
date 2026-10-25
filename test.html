@@ -51,7 +51,7 @@
   <header class="page-head">
     <p class="eyebrow">For researchers</p>
     <h1>Stimulus check</h1>
-    <p class="lead">Each file loads fully the first time you pick it, so nothing buffers mid-play. Switching tracks keeps the position, so you can compare the same bar in each version (compare slow with slow, fast with fast). Loops are gapless. Use headphones.</p>
+    <p class="lead">All files start loading at once and each plays as soon as it is fully loaded, so nothing buffers mid-play. Switching tracks keeps the position, so you can compare the same bar in each version (compare slow with slow, fast with fast). Loops are gapless. Use headphones.</p>
   </header>
 
   <div class="card" id="loading" hidden>
@@ -130,17 +130,21 @@ async function fetchWithProgress(url, onBytes) {
 }
 
 const pending = {};                          // track index -> promise of its decoded buffer
-function ensure(i) {                         // download and decode a track the first time it is picked
+const TOTAL_MB = 65;                         // all ten files together, for the progress bar
+let gotBytes = 0;
+function progress() {
+  const done = buffers.filter(Boolean).length;
+  $("loadBar").style.width = Math.min(100, gotBytes / (TOTAL_MB * 1e6) * 100) + "%";
+  $("loadText").textContent = `Loading all audio… ${(gotBytes / 1e6).toFixed(0)} of ~${TOTAL_MB} MB, ${done} of ${TRACKS.length} tracks ready. Ready tracks play already.`;
+  if (done === TRACKS.length) $("loading").hidden = true;
+}
+function ensure(i) {                         // download and decode a track (all start at page load)
   if (buffers[i]) return Promise.resolve(buffers[i]);
   if (pending[i]) return pending[i];
-  let got = 0;
-  const box = $("loading"); box.hidden = false; $("loadBar").style.width = "0%";
-  const tick = n => { got += n; $("loadBar").style.width = Math.min(100, got / 6e6 * 100) + "%";
-                      $("loadText").textContent = `Loading ${TRACKS[i].name}… ${(got / 1e6).toFixed(1)} MB`; };
-  return pending[i] = fetchWithProgress(TRACKS[i].file, tick)
-    .then(raw => { $("loadText").textContent = `Decoding ${TRACKS[i].name}…`; return ctx.decodeAudioData(raw); })
-    .then(b => { buffers[i] = b; if (!Object.keys(pending).some(k => !buffers[k])) box.hidden = true; return b; })
-    .catch(e => { delete pending[i]; $("loadText").textContent = "Could not load audio: " + e.message; throw e; });
+  return pending[i] = fetchWithProgress(TRACKS[i].file, n => { gotBytes += n; progress(); })
+    .then(raw => ctx.decodeAudioData(raw))
+    .then(b => { buffers[i] = b; progress(); return b; })
+    .catch(e => { delete pending[i]; $("loadText").textContent = `Could not load ${TRACKS[i].name}: ${e.message}`; throw e; });
 }
 
 async function load() {
@@ -148,6 +152,8 @@ async function load() {
   master = ctx.createGain(); master.gain.value = +$("vol").value; master.connect(ctx.destination);
   highlight();
   requestAnimationFrame(ui);
+  $("loading").hidden = false; progress();
+  TRACKS.forEach((t, i) => ensure(i).catch(() => {}));
   try { await ensure(0); } catch (e) { return; }
   ["play", "seek", "back", "fwd", "seam"].forEach(id => $(id).disabled = false);
   $("seek").max = dur();
