@@ -15,6 +15,9 @@
   main { padding-top:28px; padding-bottom:48px; }
   .card + p { margin-top:var(--space-4); }
   button { background:transparent; color:var(--accent); font-weight:var(--weight-regular); }
+  .group { margin:0 0 6px; font-weight:var(--weight-strong); }
+  .group + .note { margin:0 0 10px; font-size:.85rem; color:var(--muted); }
+  .tracks + .group { margin-top:20px; }
   .tracks { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   .tracks button { text-align:left; padding:12px; }
   .tracks button b { display:block; font-size:1rem; font-weight:var(--weight-strong); }
@@ -48,16 +51,16 @@
   <header class="page-head">
     <p class="eyebrow">For researchers</p>
     <h1>Stimulus check</h1>
-    <p class="lead">All four files load fully before playback, so nothing buffers mid-play. Switching tracks keeps the position, so you can compare the same bar in each version (compare slow with slow, fast with fast). Loops are gapless. Use headphones. Raga Shankarabharanam (the Western major scale), same violin in all four.</p>
+    <p class="lead">Each file loads fully the first time you pick it, so nothing buffers mid-play. Switching tracks keeps the position, so you can compare the same bar in each version (compare slow with slow, fast with fast). Loops are gapless. Use headphones.</p>
   </header>
 
-  <div class="card" id="loading">
+  <div class="card" id="loading" hidden>
     <div id="loadText">Loading audio…</div>
     <div class="bar"><div id="loadBar"></div></div>
   </div>
 
   <div class="card">
-    <div class="tracks" id="tracks"></div>
+    <div id="tracks"></div>
     <input type="range" id="seek" min="0" max="256" step="0.1" value="0" disabled>
     <div class="transport">
       <button id="play" disabled>Play</button>
@@ -68,16 +71,28 @@
       <label class="muted">Volume <input type="range" id="vol" min="0" max="1" step="0.01" value="0.8"></label>
     </div>
   </div>
-  <p class="muted">Keyboard: space = play/pause, 1–4 = switch track, ← → = seek 10 s.</p>
+  <p class="muted">Keyboard: space = play/pause, 1–9 and 0 = switch track, ← → = seek 10 s.</p>
+  <p class="muted">Candidates: veena by Ramana Balachandhran with Patri Satish Kumar (mridangam), "Emi Neramu" (Tyagaraja, Shankarabharanam), from the First Edition Arts recording; "Almost Bliss" and "Bossa Antigua" by Kevin MacLeod (incompetech.com), licensed under CC BY 4.0. Each is time-stretched to 60 and 100 BPM with Rubber Band (pitch unchanged).</p>
 </main>
 <script>
 "use strict";
-const TRACKS = [
-  { file: "stimuli/A_raga_slow.mp3",    name: "A · Indian style, slow",  desc: "60 BPM · violin with gamakas, tanpura, mridangam" },
-  { file: "stimuli/B_raga_fast.mp3",    name: "B · Indian style, fast",  desc: "120 BPM · same as A, double tempo" },
-  { file: "stimuli/C_western_slow.mp3", name: "C · Western style, slow", desc: "60 BPM · same violin, plain; piano, cello, drums" },
-  { file: "stimuli/D_western_fast.mp3", name: "D · Western style, fast", desc: "120 BPM · same as C, double tempo" }
+const GROUPS = [
+  { title: "Candidates: real recordings", note: "Not in the task yet. Pick one Western piece to pair with the veena.", tracks: [
+    { file: "stimuli/candidates/veena_slow.mp3",   name: "Veena · slow",          desc: "60 BPM · veena + mridangam, kriti \"Emi Neramu\" (78 BPM original, ×0.77)" },
+    { file: "stimuli/candidates/veena_fast.mp3",   name: "Veena · fast",          desc: "100 BPM · same clip, ×1.28" },
+    { file: "stimuli/candidates/bliss_slow.mp3",   name: "Almost Bliss · slow",   desc: "60 BPM · guitars + percussion, A major (89 BPM original, ×0.67)" },
+    { file: "stimuli/candidates/bliss_fast.mp3",   name: "Almost Bliss · fast",   desc: "100 BPM · same piece, ×1.12" },
+    { file: "stimuli/candidates/antigua_slow.mp3", name: "Bossa Antigua · slow",  desc: "60 BPM · guitar, bass, drums, bossa nova (92 BPM original, ×0.65)" },
+    { file: "stimuli/candidates/antigua_fast.mp3", name: "Bossa Antigua · fast",  desc: "100 BPM · same piece, ×1.08" }
+  ] },
+  { title: "Current task stimuli: generated", note: "What the task plays now. Shankarabharanam, same violin samples in all four.", tracks: [
+    { file: "stimuli/A_raga_slow.mp3",    name: "A · Indian style, slow",  desc: "60 BPM · violin with gamakas, tanpura, mridangam" },
+    { file: "stimuli/B_raga_fast.mp3",    name: "B · Indian style, fast",  desc: "120 BPM · same as A, double tempo" },
+    { file: "stimuli/C_western_slow.mp3", name: "C · Western style, slow", desc: "60 BPM · same violin, plain; piano, cello, drums" },
+    { file: "stimuli/D_western_fast.mp3", name: "D · Western style, fast", desc: "120 BPM · same as C, double tempo" }
+  ] }
 ];
+const TRACKS = GROUPS.flatMap(g => g.tracks);
 const $ = id => document.getElementById(id);
 
 // The theme switch (System / Light / Dark) is wired up by assets/theme.js; the choice carries over to the task page.
@@ -85,16 +100,20 @@ let ctx, master, buffers = [], cur = 0, src = null, srcGain = null, playing = fa
 
 const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 const dur = () => buffers[cur] ? buffers[cur].duration : 0;
-const pos = () => playing ? ((ctx.currentTime - t0) % dur() + dur()) % dur() : pausedAt;
+const pos = () => playing && dur() ? ((ctx.currentTime - t0) % dur() + dur()) % dur() : pausedAt;
 
-TRACKS.forEach((t, i) => {
-  const b = document.createElement("button");
-  b.innerHTML = `<b>${t.name}</b><span>${t.desc}</span>`;
-  b.disabled = true;
-  b.onclick = () => select(i);
-  $("tracks").appendChild(b);
-});
-const trackBtns = [...$("tracks").children];
+const trackBtns = [];
+for (const g of GROUPS) {
+  $("tracks").insertAdjacentHTML("beforeend", `<p class="group">${g.title}</p><p class="note">${g.note}</p>`);
+  const grid = document.createElement("div"); grid.className = "tracks";
+  for (const t of g.tracks) {
+    const i = trackBtns.length, b = document.createElement("button");
+    b.innerHTML = `<b>${t.name}</b><span>${t.desc}</span>`;
+    b.onclick = () => select(i);
+    grid.appendChild(b); trackBtns.push(b);
+  }
+  $("tracks").appendChild(grid);
+}
 
 async function fetchWithProgress(url, onBytes) {
   const res = await fetch(url);
@@ -110,25 +129,28 @@ async function fetchWithProgress(url, onBytes) {
   return out.buffer;
 }
 
+const pending = {};                          // track index -> promise of its decoded buffer
+function ensure(i) {                         // download and decode a track the first time it is picked
+  if (buffers[i]) return Promise.resolve(buffers[i]);
+  if (pending[i]) return pending[i];
+  let got = 0;
+  const box = $("loading"); box.hidden = false; $("loadBar").style.width = "0%";
+  const tick = n => { got += n; $("loadBar").style.width = Math.min(100, got / 6e6 * 100) + "%";
+                      $("loadText").textContent = `Loading ${TRACKS[i].name}… ${(got / 1e6).toFixed(1)} MB`; };
+  return pending[i] = fetchWithProgress(TRACKS[i].file, tick)
+    .then(raw => { $("loadText").textContent = `Decoding ${TRACKS[i].name}…`; return ctx.decodeAudioData(raw); })
+    .then(b => { buffers[i] = b; if (!Object.keys(pending).some(k => !buffers[k])) box.hidden = true; return b; })
+    .catch(e => { delete pending[i]; $("loadText").textContent = "Could not load audio: " + e.message; throw e; });
+}
+
 async function load() {
   ctx = new (window.AudioContext || window.webkitAudioContext)();
   master = ctx.createGain(); master.gain.value = +$("vol").value; master.connect(ctx.destination);
-  let got = 0; const approx = 4 * 4.3e6;
-  const tick = n => { got += n; $("loadBar").style.width = Math.min(100, got / approx * 100) + "%";
-                      $("loadText").textContent = `Loading audio… ${(got / 1e6).toFixed(1)} MB`; };
-  try {
-    const raw = await Promise.all(TRACKS.map(t => fetchWithProgress(t.file, tick)));
-    $("loadText").textContent = "Decoding…";
-    buffers = await Promise.all(raw.map(r => ctx.decodeAudioData(r)));
-  } catch (e) {
-    $("loadText").textContent = "Could not load audio: " + e.message; return;
-  }
-  $("loading").style.display = "none";
-  trackBtns.forEach(b => b.disabled = false);
-  ["play", "seek", "back", "fwd", "seam"].forEach(id => $(id).disabled = false);
-  $("seek").max = dur();
   highlight();
   requestAnimationFrame(ui);
+  try { await ensure(0); } catch (e) { return; }
+  ["play", "seek", "back", "fwd", "seam"].forEach(id => $(id).disabled = false);
+  $("seek").max = dur();
 }
 
 function startAt(offset) {
@@ -146,22 +168,27 @@ function stopNow() {
   srcGain.gain.linearRampToValueAtTime(0, now + 0.03); src.stop(now + 0.05); src = null; playing = false;
 }
 async function toggle() {
+  if (!buffers[cur]) return;                 // still loading
   if (ctx.state === "suspended") await ctx.resume();
   playing ? stopNow() : startAt(pausedAt);
 }
 async function select(i) {
   if (ctx.state === "suspended") await ctx.resume();
   const p = pos(); cur = i; highlight();
+  try { await ensure(i); } catch (e) { return; }
+  if (cur !== i) return;                     // another track was picked while this one loaded
+  ["play", "seek", "back", "fwd", "seam"].forEach(id => $(id).disabled = false);
   $("seek").max = dur();
   if (playing) startAt(p % dur()); else pausedAt = p % dur();
 }
 function seekTo(s) {
+  if (!buffers[cur]) return;
   s = ((s % dur()) + dur()) % dur();
   if (playing) startAt(s); else pausedAt = s;
 }
 function highlight() { trackBtns.forEach((b, i) => b.classList.toggle("on", i === cur)); }
 function ui() {
-  if (buffers.length) {
+  if (buffers[cur]) {
     const p = pos();
     if (document.activeElement !== $("seek")) $("seek").value = p;
     $("time").textContent = `${fmt(p)} / ${fmt(dur())}`;
@@ -174,12 +201,12 @@ $("play").onclick = toggle;
 $("seek").oninput = e => seekTo(+e.target.value);
 $("back").onclick = () => seekTo(pos() - 10);
 $("fwd").onclick = () => seekTo(pos() + 10);
-$("seam").onclick = async () => { if (ctx.state === "suspended") await ctx.resume(); if (!playing) { pausedAt = dur() - 6; toggle(); } else seekTo(dur() - 6); };
+$("seam").onclick = async () => { if (!buffers[cur]) return; if (ctx.state === "suspended") await ctx.resume(); if (!playing) { pausedAt = dur() - 6; toggle(); } else seekTo(dur() - 6); };
 $("vol").oninput = e => { if (master) master.gain.value = +e.target.value; };
 document.addEventListener("keydown", e => {
-  if (!buffers.length || e.target.tagName === "INPUT") return;
+  if (!buffers[cur] || e.target.tagName === "INPUT") return;
   if (e.code === "Space") { e.preventDefault(); toggle(); }
-  else if (e.key >= "1" && e.key <= "4") select(+e.key - 1);
+  else if (/^[0-9]$/.test(e.key) && (+e.key || 10) <= TRACKS.length) select((+e.key || 10) - 1);
   else if (e.key === "ArrowLeft") seekTo(pos() - 10);
   else if (e.key === "ArrowRight") seekTo(pos() + 10);
 });
