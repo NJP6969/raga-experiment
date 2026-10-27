@@ -7,11 +7,11 @@ test("@smoke every stimulus track on the check page loads, decodes and plays", a
   page.on("pageerror", e => errors.push(e.message));
   await page.goto("test.html");
   const tracks = page.locator("#tracks .tracks button");
-  await expect(tracks).toHaveCount(10);
+  await expect(tracks).toHaveCount(4);
   await expect(page.locator("#play")).toBeEnabled({ timeout: 60_000 });   // the first track loads on its own
   await page.locator("#play").click();
   await expect(page.locator("#play")).toHaveText("Pause");
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 4; i++) {
     await tracks.nth(i).click();
     await expect(tracks.nth(i)).toHaveClass(/on/);
     await expect.poll(() => page.evaluate(k => !!buffers[k] && buffers[k].duration > 60, i), { timeout: 60_000 }).toBe(true);

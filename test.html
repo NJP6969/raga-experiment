@@ -71,25 +71,17 @@
       <label class="muted">Volume <input type="range" id="vol" min="0" max="1" step="0.01" value="0.8"></label>
     </div>
   </div>
-  <p class="muted">Keyboard: space = play/pause, 1–9 and 0 = switch track, ← → = seek 10 s.</p>
-  <p class="muted">Candidates: veena by Ramana Balachandhran with Patri Satish Kumar (mridangam), "Emi Neramu" (Tyagaraja, Shankarabharanam), from the First Edition Arts recording; "Almost Bliss" and "Bossa Antigua" by Kevin MacLeod (incompetech.com), licensed under CC BY 4.0. Each is time-stretched to 60 and 100 BPM with Rubber Band (pitch unchanged).</p>
+  <p class="muted">Keyboard: space = play/pause, 1–4 = switch track, ← → = seek 10 s.</p>
+  <p class="muted">Music: veena by Ramana Balachandhran with Patri Satish Kumar (mridangam), "Emi Neramu" (Tyagaraja, Shankarabharanam), from the First Edition Arts recording. "Almost Bliss" by Kevin MacLeod (incompetech.com), licensed under CC BY 4.0. Both time-stretched with Rubber Band.</p>
 </main>
 <script>
 "use strict";
 const GROUPS = [
-  { title: "Candidates: real recordings", note: "Not in the task yet. Pick one Western piece to pair with the veena.", tracks: [
-    { file: "stimuli/candidates/veena_slow.mp3",   name: "Veena · slow",          desc: "60 BPM · veena + mridangam, kriti \"Emi Neramu\" (78 BPM original, ×0.77)" },
-    { file: "stimuli/candidates/veena_fast.mp3",   name: "Veena · fast",          desc: "100 BPM · same clip, ×1.28" },
-    { file: "stimuli/candidates/bliss_slow.mp3",   name: "Almost Bliss · slow",   desc: "60 BPM · guitars + percussion, A major (89 BPM original, ×0.67)" },
-    { file: "stimuli/candidates/bliss_fast.mp3",   name: "Almost Bliss · fast",   desc: "100 BPM · same piece, ×1.12" },
-    { file: "stimuli/candidates/antigua_slow.mp3", name: "Bossa Antigua · slow",  desc: "60 BPM · guitar, bass, drums, bossa nova (92 BPM original, ×0.65)" },
-    { file: "stimuli/candidates/antigua_fast.mp3", name: "Bossa Antigua · fast",  desc: "100 BPM · same piece, ×1.08" }
-  ] },
-  { title: "Current task stimuli: generated", note: "What the task plays now. Shankarabharanam, same violin samples in all four.", tracks: [
-    { file: "stimuli/A_raga_slow.mp3",    name: "A · Indian style, slow",  desc: "60 BPM · violin with gamakas, tanpura, mridangam" },
-    { file: "stimuli/B_raga_fast.mp3",    name: "B · Indian style, fast",  desc: "120 BPM · same as A, double tempo" },
-    { file: "stimuli/C_western_slow.mp3", name: "C · Western style, slow", desc: "60 BPM · same violin, plain; piano, cello, drums" },
-    { file: "stimuli/D_western_fast.mp3", name: "D · Western style, fast", desc: "120 BPM · same as C, double tempo" }
+  { title: "Task stimuli", note: "What the task plays. Each piece is time-stretched to 60 and 100 BPM (pitch unchanged).", tracks: [
+    { file: "stimuli/A_raga_slow.mp3",    name: "A · Indian, slow",  desc: "60 BPM · veena + mridangam, kriti \"Emi Neramu\" (78 BPM original, ×0.77)" },
+    { file: "stimuli/B_raga_fast.mp3",    name: "B · Indian, fast",  desc: "100 BPM · same clip, ×1.28" },
+    { file: "stimuli/C_western_slow.mp3", name: "C · Western, slow", desc: "60 BPM · \"Almost Bliss\", guitars + percussion, A major (89 BPM original, ×0.67)" },
+    { file: "stimuli/D_western_fast.mp3", name: "D · Western, fast", desc: "100 BPM · same piece, ×1.12" }
   ] }
 ];
 const TRACKS = GROUPS.flatMap(g => g.tracks);
@@ -130,7 +122,7 @@ async function fetchWithProgress(url, onBytes) {
 }
 
 const pending = {};                          // track index -> promise of its decoded buffer
-const TOTAL_MB = 65;                         // all ten files together, for the progress bar
+const TOTAL_MB = 25;                         // all four files together, for the progress bar
 let gotBytes = 0;
 function progress() {
   const done = buffers.filter(Boolean).length;

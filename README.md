@@ -5,28 +5,20 @@ Static page, no install. Open `index.html` in Chrome or Edge, or host the folder
 The site itself is `index.html` (the task), `test.html` (stimulus check, for researchers), `template.html` (starter page for new pages), `assets/` (design tokens, shared styles and theme switching) and `stimuli/`. Everything else (`tests/`, `tools/`, `package.json`, `playwright.config.js`) is only for testing and building and is not needed to run the task.
 
 ## Stimuli
-Raga Shankarabharanam (S R2 G3 M1 P D2 N3: exactly the Western major scale; Bilawal in Hindustani music), Adi talam, Sa = Eb. Built from real recorded samples by `make_stimuli.py`:
+Real recordings since 27 Oct 2026, built by `tools/make_real_stimuli.py`. Each piece is cut, time-stretched with Rubber Band (ffmpeg `rubberband` filter, pitch unchanged) to 60 and 100 BPM, made to loop seamlessly (2 s crossfade of the end into the start) and RMS-matched to -20 dBFS.
 
 | File | Condition |
 |---|---|
-| `A_raga_slow.mp3` | Indian style: solo violin with continuous gamakas (Ga long and plain, Ni light, kampita on Ri/Ma/Dha, descending notes approached from above, sphuritam on repeated notes), just intonation, Sa/Pa steady; real tanpura; real mridangam (moras into samam); 60 BPM |
-| `B_raga_fast.mp3` | Same at 120 BPM |
-| `C_western_slow.mp3` | Western style: the same violin samples and melody, equal temperament, one bow per note, no slides; piano broken chords and cello with major-key harmony (I ii iii IV V vi) fitted to the melody, soft drum kit; 60 BPM |
-| `D_western_fast.mp3` | Same as C at 120 BPM |
+| `A_raga_slow.mp3` | Indian: Ramana Balachandhran (veena) with Patri Satish Kumar (mridangam), "Emi Neramu" (Tyagaraja, raga Shankarabharanam, the Western major scale), from the First Edition Arts recording (YouTube aJsywTs7Vuk), 23:10-27:50 of the video. Original pulse 78 BPM, stretched x0.77 to 60 BPM |
+| `B_raga_fast.mp3` | Same clip, x1.28 to 100 BPM |
+| `C_western_slow.mp3` | Western: "Almost Bliss" by Kevin MacLeod (incompetech.com, CC BY 4.0), guitars and percussion, A major. Original 89 BPM, x0.67 to 60 BPM |
+| `D_western_fast.mp3` | Same piece, x1.12 to 100 BPM |
 
-Quiet (E) is silence. The piece has 32 avartanams: pallavi with four sangatis, anupallavi, pallavi, kalpanaswaram-style passages ending in a mora, charanam, pallavi, ending. Files are 256 s, loop seamlessly and are RMS-matched. `midi/shankarabharanam_notation.txt` has the composition in swara notation for a Carnatic musician to review; `midi/*.mid` has the plain melody and the Western backing.
+Quiet (E) is silence. The veena recording is copyrighted; it is used here for a one-off class study, and permission from First Edition Arts should be sought before any wider use.
 
-Samples (all real recordings):
-- Violin: VSCO 2 Community Edition, solo violin Arco Vib p (CC0), github.com/sgossner/VSCO-2-CE (SFZ branch).
-- Mridangam: IITM-CompMusic Mridangam Stroke Dataset, D# tonic, Freesound pack 14163 by akshaylaya (CC BY-NC 3.0). Anantapadmanabhan, Bellur & Murthy (2013), ICASSP, 181–185, doi:10.1109/ICASSP.2013.6637633.
-- Tanpura: "Tambura_Eb_fat" by Kaczinski, Freesound 506312 (CC0).
-- Western backing: GeneralUser GS soundfont (free licence) via FluidSynth.
+Why real recordings and time-stretching: the music teacher judged the generated gamakas unconvincing, the same tune does not exist in both styles, and real Carnatic pieces nearly all sit at a 65-95 BPM pulse ("fast" means more notes per beat), so a 2:1 contrast between two real pieces could not be found. Stretching one recording to two tempos keeps the melody constant within each style.
 
-To regenerate (needs numpy, mido, soundfile; put the samples in `ASSETS/violin`, `ASSETS/mridangam`, `ASSETS/tanpura_Eb.mp3`):
-```
-python make_stimuli.py --assets ASSETS --fluidsynth PATH/fluidsynth.exe --gm PATH/GeneralUser-GS.sf2
-```
-
+The earlier generated stimuli (violin samples with coded gamakas, 60/120 BPM) are made by `make_stimuli.py` and are in the git history before 27 Oct 2026.
 ## Flow
 Every information page has the same frame: a site header (the study name, plus the progress bar on the first page of each phase), a page heading with a short introduction, the content in separate cards, the buttons at the end, and a footer ("Questions about this study?" with the contact, or "ask your course instructor"). During the lists, lead-ins and rests the header and footer are hidden, so only the task is on screen.
 
