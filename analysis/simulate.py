@@ -23,7 +23,7 @@ POS_CURVE = np.array([0.9, 0.5, 0.1, -0.2, -0.4, -0.5, -0.5, -0.3, 0.1])   # pri
 
 def session(pid, sid, row, rng, eff, fam, base, blocks=5, test=0, resume_at=None, course=1):
     rows = []
-    who = dict(participant=pid, session_id=sid, music_course=course, full_name=f"Student {pid}" if course else "")
+    who = dict(participant=pid, session_id=sid, stimulus_set="real-v1", music_course=course, full_name=f"Student {pid}" if course else "")
     order = ORDERS[row]
     famz = (fam - 3) / 1.2
     for b in range(blocks):

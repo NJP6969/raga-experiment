@@ -97,6 +97,7 @@ const DATAPIPE_ID = "hmU1FxSIMrPB";         // DataPipe experiment; files land i
 const LEAD_IN_S = FAST ? 3 : 30;
 const REST_S = FAST ? 2 : 20;
 const RECALL_LEN = 9, RECALL_LISTS = 8;     // serial recall: 8 lists of 9 digits per block (all of 1-9, random order)
+const STIMULUS_SET = "real-v1";              // veena + Almost Bliss at 60/100 BPM; the analysis keeps only this set
 // Shown on the information and consent pages. Fill these in before running the study; empty ones are left out
 // (without a contact, participants are told to ask their course instructor).
 const STUDY = {
@@ -249,7 +250,7 @@ function mean(a) { return a.length ? a.reduce((x, y) => x + y, 0) / a.length : N
 function fmt(x, d = 0) { return Number.isFinite(x) ? x.toFixed(d) : "–"; }
 
 function log(r) {
-  rows.push({ participant: P.id, session_id: P.session, consent_time: P.consentAt || "", music_course: P.musicCourse, full_name: P.name, device: P.device, theme: Theme.get(), theme_resolved: Theme.resolved(), test_run: FAST ? 1 : 0, order_row: P.row + 1, order: P.order.join(""), order_source: P.orderSource, resumes: P.resumes, fam_carnatic: P.famC, fam_hindustani: P.famH, training_years: P.training,
+  rows.push({ participant: P.id, session_id: P.session, stimulus_set: STIMULUS_SET, consent_time: P.consentAt || "", music_course: P.musicCourse, full_name: P.name, device: P.device, theme: Theme.get(), theme_resolved: Theme.resolved(), test_run: FAST ? 1 : 0, order_row: P.row + 1, order: P.order.join(""), order_source: P.orderSource, resumes: P.resumes, fam_carnatic: P.famC, fam_hindustani: P.famH, training_years: P.training,
               audio_ok: audioOK, timestamp: new Date().toISOString(), ...r });
 }
 

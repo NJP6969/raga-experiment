@@ -9,7 +9,8 @@ Steps (in this order, all reported in results/summary.txt):
  1. File selection, per session_id: the final <ID>_<session>_trials.csv if present, otherwise the
     highest-numbered <ID>_<session>_progress_b<N>[_r<K>].csv (most completed blocks).
  2. Exclusions:
-    a. test runs (test_run == 1) and pilot sessions from earlier task versions (list length != 9);
+    a. test runs (test_run == 1) and pilot sessions from earlier task versions (list length != 9,
+       or stimulus_set != "real-v1", i.e. the generated music used before 27 Oct 2026);
     b. music blocks where audio failed (audio_ok false) are dropped;
     c. if one participant ID has several sessions (e.g. "Start over"), keep the session with the
        most completed recall lists (earliest if tied), unless --keep-duplicate-ids;
@@ -40,6 +41,7 @@ import statsmodels.formula.api as smf
 FILE_RE = re.compile(r"^(?P<base>.+?)_(?P<kind>trials|blocks|progress_b(?P<n>\d+)(?:_r(?P<r>\d+))?)\.csv$")
 MIN_OVERALL = 0.20
 LIST_LEN = 9          # the registered task; earlier pilot versions used 8
+STIMULUS_SET = "real-v1"   # real recordings (veena, Almost Bliss); earlier pilots used generated music
 
 
 def select_files(data_dir, log):
@@ -112,9 +114,10 @@ def main():
     d = raw[raw["test_run"].astype(str).isin(["0", "0.0", "False", "false"])].copy()
     log(f"Excluded test runs: {n0 - d['session_id'].nunique()} sessions")
     rec = d[d["task"] == "recall"].copy()
-    old = rec["list_length"].astype(float) != LIST_LEN
+    sset = rec["stimulus_set"].astype(str) if "stimulus_set" in rec else pd.Series("", index=rec.index)
+    old = (rec["list_length"].astype(float) != LIST_LEN) | (sset != STIMULUS_SET)
     if old.any():
-        log(f"Excluded sessions run with an earlier task version (list length != {LIST_LEN}, i.e. pilots): {rec.loc[old, 'session_id'].nunique()}")
+        log(f"Excluded sessions run with an earlier task version (list length != {LIST_LEN} or stimulus set != {STIMULUS_SET}, i.e. pilots): {rec.loc[old, 'session_id'].nunique()}")
     rec = rec[~old]
     bad_audio = rec["audio_ok"].astype(str).str.lower().isin(["false", "0"]) & (rec["style"] != "quiet")
     log(f"Excluded music blocks with failed audio: {rec[bad_audio].groupby(['session_id', 'block_position']).ngroups}")
